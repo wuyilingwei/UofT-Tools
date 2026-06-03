@@ -8,7 +8,7 @@
 
 ## Project page
 
-Please visit the [uoftcal.wuyilingwei.com](https://uoftcal.wuyilingwei.com) for subscription links and more information.
+Please visit the [uoft.wuyilingwei.com](https://uoft.wuyilingwei.com) for subscription links and more information.
 
 ## Automatically Updated Calendars
 
