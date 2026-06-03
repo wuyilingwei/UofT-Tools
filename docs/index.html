@@ -1,19 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>U of T Important Dates  Calendar Subscription</title>
-  <meta name="description" content="Subscribe to University of Toronto important academic dates as a calendar feed. Covers UTM, UTSC, and ArtsCI (St. George). Auto-updated daily." />
+  <title>UofT Tools &mdash; Student Tools for University of Toronto</title>
+  <meta name="description" content="A collection of unofficial student-built tools for the University of Toronto. Academic calendar feeds, and more." />
   <style>
     :root {
       --blue:   #002a5c;
+      --gold:   #e8b400;
       --grey:   #D0D5E1;
       --light:  #f5f7fa;
       --border: #dde2ea;
       --text:   #1a1a2e;
       --muted:  #5a6175;
-      --radius: 10px;
+      --radius: 12px;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -21,262 +22,164 @@
       background: var(--light); color: var(--text); min-height: 100vh;
       display: flex; flex-direction: column;
     }
+
+    /* ── Hero header ── */
     header {
-      background: var(--blue); color: #fff; padding: 1.25rem 1.5rem;
-      display: flex; align-items: center; gap: 1rem;
+      background: var(--blue); color: #fff;
+      padding: 3rem 1.5rem 2.5rem;
+      text-align: center;
     }
-    header .badge {
-      background: var(--grey); color: var(--blue); font-size: .7rem; font-weight: 700;
-      letter-spacing: .06em; text-transform: uppercase; padding: .2em .55em;
-      border-radius: 4px; white-space: nowrap;
+    header .wordmark {
+      display: inline-flex; align-items: center; gap: .6rem;
+      margin-bottom: 1rem;
     }
-    header h1 { font-size: 1.2rem; font-weight: 600; }
-    main { flex: 1; max-width: 780px; width: 100%; margin: 2.5rem auto; padding: 0 1.25rem; }
-    .disclaimer {
-      border-left: 4px solid var(--grey); background: #fff8ec; padding: .75rem 1rem;
-      border-radius: 0 var(--radius) var(--radius) 0; font-size: .875rem;
-      color: #6b4c00; margin-bottom: 2rem;
+    header .wordmark .dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--gold); flex-shrink: 0;
     }
-    .disclaimer strong { color: #5a3e00; }
-    .campus-section { margin-bottom: 2.5rem; }
-    .campus-header {
-      display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem;
-      padding-bottom: .6rem; border-bottom: 2px solid var(--blue);
+    header .wordmark span {
+      font-size: 1rem; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; opacity: .7;
     }
-    .campus-header h2 { font-size: 1.1rem; font-weight: 700; color: var(--blue); }
-    .campus-tag {
-      font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-      padding: .2em .6em; border-radius: 4px; background: var(--blue); color: #fff;
+    header h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 700; line-height: 1.2; margin-bottom: .75rem;
     }
-    .card {
-      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+    header p {
+      font-size: 1rem; opacity: .75; max-width: 480px; margin: 0 auto;
+      line-height: 1.6;
     }
-    .card h3 {
-      font-size: .95rem; font-weight: 600; color: var(--blue); margin-bottom: .65rem;
-      display: flex; align-items: center; gap: .5rem;
+    .disclaimer-strip {
+      background: #fff8ec; border-bottom: 1px solid #f0d880;
+      text-align: center; font-size: .78rem; color: #6b4c00;
+      padding: .55rem 1rem;
     }
-    .card p, .card li { font-size: .88rem; color: var(--muted); line-height: 1.6; }
-    .card ul { padding-left: 1.2rem; margin-top: .4rem; }
-    .card ul li { margin-bottom: .25rem; }
-    .cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    @media (max-width: 580px) { .cards-row { grid-template-columns: 1fr; } }
-    .actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .75rem; }
-    .btn {
-      display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem;
-      border-radius: 6px; font-size: .85rem; font-weight: 600; text-decoration: none;
-      cursor: pointer; transition: opacity .15s; border: none;
+
+    /* ── Tool grid ── */
+    main {
+      flex: 1; max-width: 900px; width: 100%;
+      margin: 2.5rem auto; padding: 0 1.25rem;
     }
-    .btn:hover { opacity: .85; }
-    .btn-primary { background: var(--blue); color: #fff; }
-    .btn-outline { background: transparent; color: var(--blue); border: 1.5px solid var(--blue); }
-    .btn-copy { background: var(--grey); color: var(--blue); }
-    .url-row { display: flex; align-items: center; gap: .5rem; margin-top: .65rem; flex-wrap: wrap; }
-    .url-box {
-      flex: 1; min-width: 0; font-family: "SF Mono","Fira Code",Consolas,monospace;
-      font-size: .78rem; background: var(--light); border: 1px solid var(--border);
-      border-radius: 6px; padding: .4rem .65rem; color: var(--text);
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: all;
+    .section-label {
+      font-size: .7rem; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 1.25rem;
     }
-    .toast { display: none; font-size: .8rem; color: green; font-weight: 600; }
-    footer { text-align: center; font-size: .78rem; color: var(--muted); padding: 1.5rem; border-top: 1px solid var(--border); }
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 3rem;
+    }
+    .tool-card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: .75rem;
+      transition: box-shadow .15s, transform .15s;
+      position: relative; overflow: hidden;
+    }
+    .tool-card:hover {
+      box-shadow: 0 4px 20px rgba(0,42,92,.1);
+      transform: translateY(-2px);
+    }
+    .tool-card.coming-soon {
+      opacity: .6; cursor: default; pointer-events: none;
+    }
+    .tool-card .icon {
+      font-size: 2rem; line-height: 1;
+    }
+    .tool-card .card-tag {
+      position: absolute; top: 1rem; right: 1rem;
+      font-size: .65rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; padding: .2em .55em; border-radius: 4px;
+    }
+    .tag-live { background: #d4edda; color: #1a5c30; }
+    .tag-soon { background: var(--grey); color: var(--muted); }
+    .tool-card h2 {
+      font-size: 1rem; font-weight: 700; color: var(--blue);
+      margin: 0;
+    }
+    .tool-card p {
+      font-size: .85rem; color: var(--muted); line-height: 1.55; margin: 0;
+    }
+    .tool-card .card-meta {
+      font-size: .75rem; color: var(--muted);
+      display: flex; align-items: center; gap: .4rem;
+      margin-top: auto; padding-top: .5rem;
+      border-top: 1px solid var(--border);
+    }
+    .tool-card .card-meta .pill {
+      background: var(--light); border: 1px solid var(--border);
+      border-radius: 4px; padding: .15em .5em; font-size: .7rem;
+    }
+    .tool-card .arrow {
+      position: absolute; bottom: 1.25rem; right: 1.25rem;
+      font-size: .9rem; color: var(--blue); opacity: .5;
+      transition: opacity .15s, transform .15s;
+    }
+    .tool-card:hover .arrow { opacity: 1; transform: translateX(3px); }
+
+    footer {
+      text-align: center; font-size: .78rem; color: var(--muted);
+      padding: 1.5rem; border-top: 1px solid var(--border);
+    }
     footer a { color: var(--blue); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
+
 <header>
-  <div>
-    <h1>U of T Important Dates</h1>
-    <p style="font-size:.8rem;opacity:.75;margin-top:.1rem">University of Toronto &mdash; Academic Calendar Feeds</p>
+  <div class="wordmark">
+    <div class="dot"></div>
+    <span>UofT Tools</span>
+    <div class="dot"></div>
   </div>
+  <h1>Student Tools for<br>University of Toronto</h1>
+  <p>Unofficial utilities built by a student to make campus life a little easier.</p>
 </header>
+
+<div class="disclaimer-strip">
+  &#9888; Unofficial &mdash; not affiliated with or endorsed by the University of Toronto. Use at your own risk.
+</div>
+
 <main>
-  <div class="disclaimer">
-    <strong>&#9888; Unofficial Tool &mdash; Please Read Before Using.</strong>
-    This project is developed and maintained by a student and is <em>not</em> affiliated with or endorsed by the University of Toronto.
-    This service is provided <strong>AS IS</strong> with no warranty of any kind, express or implied, including accuracy, completeness, or timeliness.
-    <br /><br />
-    This tool is intended for supplementary reference only and should not be used as the sole basis for academic or financial planning.
-    <strong>The dates shown are not guaranteed to be accurate or complete.</strong>
-    You are solely responsible for regularly verifying all academic, payment, and refund deadlines at your campus&rsquo;s official registrar page.
-    As the university makes clear, <em>being unaware of an academic, payment, or refund deadline is not a typical reason to receive an exception or extension.</em>
-    <br /><br />
-    Use of this tool is strictly at your own risk; I assume no liability for any errors, omissions, or consequences resulting from its use.
-  </div>
+  <p class="section-label">Available Tools</p>
+  <div class="tool-grid">
 
-  <!-- ArtsCI / UTSG -->
-  <div class="campus-section" data-ics="artsci.ics">
-    <div class="campus-header">
-      <h2>Faculty of Arts &amp; Science (St. George)</h2><span class="campus-tag">UTSG</span>
-    </div>
-    <div class="cards-row">
-      <div class="card">
-        <h3>&#128225; Subscribe (auto-updates daily)</h3>
-        <p>Webcal feed &mdash; updates automatically.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="webcal://wuyilingwei.github.io/U-of-T-Important-Dates/artsci.ics">Add to Calendar</a>
-          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwuyilingwei.github.io%2FU-of-T-Important-Dates%2Fartsci.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
-        </div>
-        <div class="url-row">
-          <span class="url-box" id="artsciUrl">webcal://wuyilingwei.github.io/U-of-T-Important-Dates/artsci.ics</span>
-          <button class="btn btn-copy" onclick="copyUrl('artsciUrl','artsciToast')">Copy</button>
-          <span class="toast" id="artsciToast">Copied!</span>
-        </div>
+    <a class="tool-card" href="/ics/">
+      <span class="card-tag tag-live">Live</span>
+      <div class="icon">&#128197;</div>
+      <h2>Academic Calendar Feeds</h2>
+      <p>Subscribe to UTM, UTSC, and ArtsCI important academic dates as a webcal feed. Auto-updated daily via GitHub Actions.</p>
+      <div class="card-meta">
+        <span class="pill">UTSG</span>
+        <span class="pill">UTM</span>
+        <span class="pill">UTSC</span>
       </div>
-      <div class="card">
-        <h3>&#8659; Download Snapshot</h3>
-        <p>Import once. Won&rsquo;t auto-update.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="artsci.ics" download="artsci_important_dates.ics">Download artsci.ics</a>
-          <a class="btn btn-outline" href="https://www.artsci.utoronto.ca/current/dates-deadlines/academic-dates" target="_blank" rel="noopener noreferrer">Official Page &#8599;</a>
-        </div>
-      </div>
-    </div>
-  </div>
+      <span class="arrow">&#8594;</span>
+    </a>
 
-  <!-- UTM -->
-  <div class="campus-section" data-ics="utm.ics">
-    <div class="campus-header">
-      <h2>University of Toronto Mississauga</h2><span class="campus-tag">UTM</span>
-    </div>
-    <div class="cards-row">
-      <div class="card">
-        <h3>&#128225; Subscribe (auto-updates daily)</h3>
-        <p>Webcal feed &mdash; updates automatically.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="webcal://wuyilingwei.github.io/U-of-T-Important-Dates/utm.ics">Add to Calendar</a>
-          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwuyilingwei.github.io%2FU-of-T-Important-Dates%2Futm.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
-        </div>
-        <div class="url-row">
-          <span class="url-box" id="utmUrl">webcal://wuyilingwei.github.io/U-of-T-Important-Dates/utm.ics</span>
-          <button class="btn btn-copy" onclick="copyUrl('utmUrl','utmToast')">Copy</button>
-          <span class="toast" id="utmToast">Copied!</span>
-        </div>
-      </div>
-      <div class="card">
-        <h3>&#8659; Download Snapshot</h3>
-        <p>Import once. Won&rsquo;t auto-update.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="utm.ics" download="utm_important_dates.ics">Download utm.ics</a>
-          <a class="btn btn-outline" href="https://www.utm.utoronto.ca/registrar/dates" target="_blank" rel="noopener noreferrer">Official Page &#8599;</a>
-        </div>
+    <div class="tool-card coming-soon">
+      <span class="card-tag tag-soon">Coming Soon</span>
+      <div class="icon">&#128270;</div>
+      <h2>More Tools</h2>
+      <p>Additional tools for UofT students are in the works. Check back later.</p>
+      <div class="card-meta">
+        <span class="pill">TBD</span>
       </div>
     </div>
-  </div>
 
-  <!-- UTSC -->
-  <div class="campus-section" data-ics="utsc.ics">
-    <div class="campus-header">
-      <h2>University of Toronto Scarborough</h2><span class="campus-tag">UTSC</span>
-    </div>
-    <div class="cards-row">
-      <div class="card">
-        <h3>&#128225; Subscribe (auto-updates daily)</h3>
-        <p>Webcal feed &mdash; updates automatically.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="webcal://wuyilingwei.github.io/U-of-T-Important-Dates/utsc.ics">Add to Calendar</a>
-          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fwuyilingwei.github.io%2FU-of-T-Important-Dates%2Futsc.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
-        </div>
-        <div class="url-row">
-          <span class="url-box" id="utscUrl">webcal://wuyilingwei.github.io/U-of-T-Important-Dates/utsc.ics</span>
-          <button class="btn btn-copy" onclick="copyUrl('utscUrl','utscToast')">Copy</button>
-          <span class="toast" id="utscToast">Copied!</span>
-        </div>
-      </div>
-      <div class="card">
-        <h3>&#8659; Download Snapshot</h3>
-        <p>Import once. Won&rsquo;t auto-update.</p>
-        <div class="actions">
-          <a class="btn btn-primary" href="utsc.ics" download="utsc_important_dates.ics">Download utsc.ics</a>
-          <a class="btn btn-outline" href="https://www.utsc.utoronto.ca/registrar/academic-dates" target="_blank" rel="noopener noreferrer">Official Page &#8599;</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- How it works -->
-  <div class="card" style="margin-top:.5rem">
-    <h3>&#9432; How it works</h3>
-    <ul>
-      <li>A GitHub Actions job runs once per day.</li>
-      <li><strong>UTM</strong> &mdash; headless browser renders the Elfsight widget on the UTM registrar page.</li>
-      <li><strong>UTSC</strong> &mdash; static HTML tables on the UTSC registrar sub-pages are fetched directly.</li>
-      <li><strong>ArtsCI</strong> &mdash; headless browser expands the accordion panels on the ArtsCI dates page.</li>
-      <li>All events are converted to all-day ICS entries and committed to this repository.</li>
-      <li>Calendar apps that support webcal/CalDAV poll the URL and pull in any changes.</li>
-    </ul>
   </div>
 </main>
+
 <footer>
   <p>
-    Sources:
-    <a href="https://www.utm.utoronto.ca/registrar/dates" target="_blank" rel="noopener noreferrer">UTM</a> &bull;
-    <a href="https://www.utsc.utoronto.ca/registrar/academic-dates" target="_blank" rel="noopener noreferrer">UTSC</a> &bull;
-    <a href="https://www.artsci.utoronto.ca/current/dates-deadlines/academic-dates" target="_blank" rel="noopener noreferrer">ArtsCI</a> &bull;
-    <a href="https://github.com/wuyilingwei/U-of-T-Important-Dates" target="_blank" rel="noopener noreferrer">View on GitHub</a>;
+    Not affiliated with the University of Toronto &bull;
+    <a href="https://github.com/wuyilingwei/UofT-Tools" target="_blank" rel="noopener noreferrer">View on GitHub</a>
   </p>
 </footer>
-<script>
-  // ── URL auto-detection ──────────────────────────────────────────────────────
-  // Builds webcal/https URLs from the current origin so the page works on any
-  // host (GitHub Pages, Cloudflare Pages, custom domain, localhost, etc.).
-  // Falls back to the hardcoded GitHub Pages URL if the environment looks odd.
-  const FALLBACK_BASE = 'https://wuyilingwei.github.io/U-of-T-Important-Dates/';
 
-  function resolveBase() {
-    try {
-      // Strip filename (if any) to get the directory URL
-      const base = window.location.origin +
-        window.location.pathname.replace(/\/[^/]*$/, '/');
-      // Reject non-http(s) schemes (file://, about:, etc.) → use fallback
-      if (!/^https?:\/\//.test(base)) return FALLBACK_BASE;
-      return base.endsWith('/') ? base : base + '/';
-    } catch (e) {
-      return FALLBACK_BASE;
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const base = resolveBase();
-    document.querySelectorAll('.campus-section[data-ics]').forEach(section => {
-      const file      = section.dataset.ics;
-      const httpsUrl  = base + file;
-      const webcalUrl = httpsUrl.replace(/^https?:\/\//, 'webcal://');
-      const gcalUrl   = 'https://calendar.google.com/calendar/r?cid=' +
-                        encodeURIComponent(webcalUrl);
-
-      const subscribeCard = section.querySelector('.cards-row .card');
-      if (!subscribeCard) return;
-
-      const addBtn  = subscribeCard.querySelector('a.btn-primary');
-      const gcalBtn = subscribeCard.querySelector('a.btn-outline');
-      const urlBox  = subscribeCard.querySelector('.url-box');
-
-      if (addBtn)  addBtn.href         = webcalUrl;
-      if (gcalBtn) gcalBtn.href        = gcalUrl;
-      if (urlBox)  urlBox.textContent  = webcalUrl;
-    });
-  });
-
-  // ── Copy-to-clipboard ────────────────────────────────────────────────────────
-  function copyUrl(boxId, toastId) {
-    const url = document.getElementById(boxId).textContent.trim();
-    navigator.clipboard.writeText(url).then(() => showToast(toastId)).catch(() => {
-      const el = document.getElementById(boxId);
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(range);
-      showToast(toastId);
-    });
-  }
-  function showToast(id) {
-    const t = document.getElementById(id);
-    t.style.display = 'inline';
-    setTimeout(() => { t.style.display = 'none'; }, 2000);
-  }
-</script>
 </body>
 </html>
