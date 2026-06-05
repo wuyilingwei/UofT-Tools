@@ -387,21 +387,21 @@ function filterSections(v) { renderSectionList(v); }
 function selectSection(slug, event) {
   event?.stopPropagation();
   state.activeSectionSlug = slug;
+  const targetEl = event?.target;
+  const rect = targetEl ? targetEl.getBoundingClientRect() : null;
+  const sidebar = document.querySelector('.sidebar');
+  const sbRect = sidebar ? sidebar.getBoundingClientRect() : null;
   renderSectionList(document.getElementById('section-search').value);
   renderSidebarPopup();
-  openSidebarPopup(event?.target||null);
-}
-
-
-function openSidebarPopup(anchorEl) {
-  const popup = document.getElementById('sidebar-popup');
-  if (anchorEl) {
-    const rect = anchorEl.getBoundingClientRect();
-    const sidebar = document.querySelector('.sidebar');
-    const sbRect = sidebar.getBoundingClientRect();
+  if (rect && sbRect) {
+    const popup = document.getElementById('sidebar-popup');
     popup.style.top = (rect.top - sbRect.top) + 'px';
   }
-  popup.classList.add('open');
+  openSidebarPopup();
+}
+
+function openSidebarPopup() {
+  document.getElementById('sidebar-popup').classList.add('open');
 }
 
 function closeSidebarPopup() {
@@ -680,7 +680,7 @@ function loadSavedPlanner() {
 
 function getStatus(code)    { return state.courseStatus.get(code) || 0; }
 function isDone(code)       { return getStatus(code) === 3; }
-function isSatisfied(code)  { return getStatus(code) >= 2; } // taking or done counts
+function isSatisfied(code)  { return getStatus(code) >= 1; } // planned, taking or done counts
 
 function setCourseStatus(code, status) {
   if (status === 0) state.courseStatus.delete(code);
@@ -912,6 +912,9 @@ function addSuggested(id) {
     state.selectedPrograms.push({...prog, intention: false});
     savePlannerState();
     renderChips(); renderCourseArea(); renderSuggestions(); refreshCoursePicks();
+  }
+}
+
 function populateSessionSelect() {
   const sel = document.getElementById('session-select');
   const available = state.sessions.filter(s => s.value && s.value !== '');
