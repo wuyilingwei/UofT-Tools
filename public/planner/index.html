@@ -30,7 +30,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .tab-panel.active{display:flex;height:calc(100vh - 94px)}
 
 /* ── Sidebar ── */
-.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;background:var(--gray-50);position:relative}
+.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;background:var(--gray-50);position:relative;z-index:100}
 .sidebar-search{padding:10px;border-bottom:1px solid var(--gray-200)}
 .sidebar-search input{width:100%;padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none}
 .sidebar-search input:focus{border-color:var(--teal)}
@@ -345,7 +345,11 @@ async function init() {
   ]);
   state.programs = progs;
   state.sessions = sess;
+  loadSavedPlanner();
   renderSectionList();
+  renderChips();
+  renderCourseArea();
+  renderSuggestions();
   populateSessionSelect();
   document.addEventListener('click', handleGlobalClick);
   // Load course prereq/exclusion data in the background — non-blocking
@@ -372,17 +376,18 @@ function renderSectionList(filter='') {
   );
   list.innerHTML = sections.map(s => `
     <button class="section-item ${s.slug===state.activeSectionSlug?'active':''}"
-            onclick="selectSection('${s.slug}')">${s.name || s.slug.replace(/-/g,' ')}</button>
+            onclick="selectSection('${s.slug}', event)">${s.name || s.slug.replace(/-/g,' ')}</button>
   `).join('');
 }
 
 function filterSections(v) { renderSectionList(v); }
 
-function selectSection(slug) {
+function selectSection(slug, event) {
+  event?.stopPropagation();
   state.activeSectionSlug = slug;
   renderSectionList(document.getElementById('section-search').value);
-  openSidebarPopup();
   renderSidebarPopup();
+  openSidebarPopup();
 }
 
 // SIDEBAR POPUP
@@ -443,6 +448,7 @@ function toggleProgram(id) {
     const prog = findProgramById(id);
     if (prog) state.selectedPrograms.push({...prog, intention: false});
   }
+  savePlannerState();
   renderSidebarPopup();
   renderChips();
   renderCourseArea();
@@ -483,7 +489,7 @@ function renderChips() {
 
 function toggleIntention(id) {
   const p = state.selectedPrograms.find(p => p.id === id);
-  if (p) { p.intention = !p.intention; renderChips(); renderCourseArea(); }
+  if (p) { p.intention = !p.intention; savePlannerState(); renderChips(); renderCourseArea(); }
 }
 
 function renderLegality() {
@@ -643,6 +649,22 @@ function viewToggleHTML() {
 }
 
 // ═══════════════════════════════ STATUS HELPERS ══════════════════════
+function savePlannerState() {
+  localStorage.setItem('utm_course_status', JSON.stringify(Object.fromEntries(state.courseStatus)));
+  localStorage.setItem('utm_selected_programs', JSON.stringify(
+    state.selectedPrograms.map(p => ({id: p.id, intention: !!p.intention}))
+  ));
+}
+
+function loadSavedPlanner() {
+  const saved = JSON.parse(localStorage.getItem('utm_selected_programs') || '[]');
+  state.selectedPrograms = [];
+  for (const s of saved) {
+    const p = findProgramById(s.id);
+    if (p) state.selectedPrograms.push({...p, intention: !!s.intention});
+  }
+}
+
 function getStatus(code)    { return state.courseStatus.get(code) || 0; }
 function isDone(code)       { return getStatus(code) === 3; }
 function isSatisfied(code)  { return getStatus(code) >= 2; } // taking or done counts
@@ -650,7 +672,7 @@ function isSatisfied(code)  { return getStatus(code) >= 2; } // taking or done c
 function setCourseStatus(code, status) {
   if (status === 0) state.courseStatus.delete(code);
   else state.courseStatus.set(code, status);
-  localStorage.setItem('utm_course_status', JSON.stringify(Object.fromEntries(state.courseStatus)));
+  savePlannerState();
   renderCourseArea();
   refreshCoursePicks();
 }
@@ -724,6 +746,7 @@ function importData() {
             if (p) state.selectedPrograms.push({...p, intention: !!s.intention});
           }
         }
+        savePlannerState();
         renderChips(); renderCourseArea(); renderSuggestions(); refreshCoursePicks();
       } catch(err) { alert('Import failed: ' + err.message); }
     };
