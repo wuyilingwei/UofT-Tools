@@ -46,7 +46,7 @@ TORONTO_TZ = pytz.timezone("America/Toronto")
 ELFSIGHT_APP_CLASS = "elfsight-app-f242be0e-1d36-4aef-8bbf-d260c4c8f05e"
 
 SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "ics"
+OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "calendar"
 OUTPUT_FILE = OUTPUT_DIR / "utm.ics"
 
 # ---------------------------------------------------------------------------

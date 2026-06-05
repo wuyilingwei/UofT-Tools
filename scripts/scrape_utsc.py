@@ -43,7 +43,7 @@ UTSC_HUB_URL = "https://www.utsc.utoronto.ca/registrar/academic-dates"
 TORONTO_TZ = pytz.timezone("America/Toronto")
 
 SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "ics"
+OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "calendar"
 OUTPUT_FILE = OUTPUT_DIR / "utsc.ics"
 
 # Session sub-page URL patterns (relative path portion):

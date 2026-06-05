@@ -85,6 +85,29 @@
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: all;
     }
     .toast { display: none; font-size: .8rem; color: green; font-weight: 600; }
+    /* ── Experimental section ── */
+    .exp-section {
+      border: 1.5px dashed #c99a00; border-radius: var(--radius);
+      padding: 1.25rem 1.5rem; margin-top: 2rem; background: #fffdf0;
+    }
+    .exp-header { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+    .exp-badge {
+      font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      padding: .2em .65em; border-radius: 4px; background: #e8b400; color: #3d2e00;
+      white-space: nowrap;
+    }
+    .exp-title { font-size: 1rem; font-weight: 700; color: var(--blue); margin: 0; }
+    .exp-notice {
+      font-size: .83rem; color: #5a4500; line-height: 1.65;
+      background: #fff8dc; border: 1px solid #e8c700;
+      border-radius: var(--radius); padding: .75rem 1rem; margin-bottom: 1.25rem;
+    }
+    .exp-notice p + p { margin-top: .45rem; }
+    .exp-campus { padding: .9rem 0; border-top: 1px solid #f0d880; }
+    .exp-campus-label {
+      font-size: .85rem; font-weight: 700; color: var(--blue);
+      margin-bottom: .6rem; display: flex; align-items: center; gap: .5rem;
+    }
     footer { text-align: center; font-size: .78rem; color: var(--muted); padding: 1.5rem; border-top: 1px solid var(--border); }
     footer a { color: var(--blue); text-decoration: none; }
     footer a:hover { text-decoration: underline; }
@@ -100,7 +123,7 @@
 </header>
 <main>
   <!-- ArtsCI / UTSG -->
-  <div class="campus-section" data-ics="artsci.ics">
+  <div class="campus-section" data-ics="artsci.ics" data-filtered-ics="artsci-filtered.ics">
     <div class="campus-header">
       <h2>Faculty of Arts &amp; Science (St. George)</h2><span class="campus-tag">UTSG</span>
     </div>
@@ -109,11 +132,11 @@
         <h3>&#128225; Subscribe (auto-updates daily)</h3>
         <p>Webcal feed &mdash; updates automatically.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calender/artsci.ics">Add to Calendar</a>
-          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fics%2Fartsci.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
+          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calendar/artsci.ics">Add to Calendar</a>
+          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fcalendar%2Fartsci.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
         </div>
         <div class="url-row">
-          <span class="url-box" id="artsciUrl">webcal://uoft.wuyilingwei.com/calender/artsci.ics</span>
+          <span class="url-box" id="artsciUrl">webcal://uoft.wuyilingwei.com/calendar/artsci.ics</span>
           <button class="btn btn-copy" onclick="copyUrl('artsciUrl','artsciToast')">Copy</button>
           <span class="toast" id="artsciToast">Copied!</span>
         </div>
@@ -130,7 +153,7 @@
   </div>
 
   <!-- UTM -->
-  <div class="campus-section" data-ics="utm.ics">
+  <div class="campus-section" data-ics="utm.ics" data-filtered-ics="utm-filtered.ics">
     <div class="campus-header">
       <h2>University of Toronto Mississauga</h2><span class="campus-tag">UTM</span>
     </div>
@@ -139,11 +162,11 @@
         <h3>&#128225; Subscribe (auto-updates daily)</h3>
         <p>Webcal feed &mdash; updates automatically.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calender/utm.ics">Add to Calendar</a>
-          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fics%2Futm.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
+          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calendar/utm.ics">Add to Calendar</a>
+          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fcalendar%2Futm.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
         </div>
         <div class="url-row">
-          <span class="url-box" id="utmUrl">webcal://uoft.wuyilingwei.com/calender/utm.ics</span>
+          <span class="url-box" id="utmUrl">webcal://uoft.wuyilingwei.com/calendar/utm.ics</span>
           <button class="btn btn-copy" onclick="copyUrl('utmUrl','utmToast')">Copy</button>
           <span class="toast" id="utmToast">Copied!</span>
         </div>
@@ -160,7 +183,7 @@
   </div>
 
   <!-- UTSC -->
-  <div class="campus-section" data-ics="utsc.ics">
+  <div class="campus-section" data-ics="utsc.ics" data-filtered-ics="utsc-filtered.ics">
     <div class="campus-header">
       <h2>University of Toronto Scarborough</h2><span class="campus-tag">UTSC</span>
     </div>
@@ -169,11 +192,11 @@
         <h3>&#128225; Subscribe (auto-updates daily)</h3>
         <p>Webcal feed &mdash; updates automatically.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calender/utsc.ics">Add to Calendar</a>
-          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fics%2Futsc.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
+          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calendar/utsc.ics">Add to Calendar</a>
+          <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fcalendar%2Futsc.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
         </div>
         <div class="url-row">
-          <span class="url-box" id="utscUrl">webcal://uoft.wuyilingwei.com/calender/utsc.ics</span>
+          <span class="url-box" id="utscUrl">webcal://uoft.wuyilingwei.com/calendar/utsc.ics</span>
           <button class="btn btn-copy" onclick="copyUrl('utscUrl','utscToast')">Copy</button>
           <span class="toast" id="utscToast">Copied!</span>
         </div>
@@ -185,6 +208,60 @@
           <a class="btn btn-primary" href="utsc.ics" download="utsc_important_dates.ics">Download utsc.ics</a>
           <a class="btn btn-outline" href="https://www.utsc.utoronto.ca/registrar/academic-dates" target="_blank" rel="noopener noreferrer">Official Page &#8599;</a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Experimental: Program-Filtered Feeds ── -->
+  <div class="exp-section">
+    <div class="exp-header">
+      <span class="exp-badge">Experimental</span>
+      <h2 class="exp-title">Program-Filtered Feeds</h2>
+    </div>
+    <div class="exp-notice">
+      <p>For students <strong>already enrolled in a declared program, major, specialist, or minor</strong>. Hides program-selection events such as limited-enrolment program application rounds, program selection periods, and invitation deadlines &mdash; dates that are no longer relevant once you are in your program.</p>
+      <p><strong>&#9888; Keyword-based filtering &mdash; false positives are possible.</strong> Some legitimate events may be removed; some program-selection events may remain. Always verify important dates on your campus registrar website.</p>
+    </div>
+
+    <!-- ArtsCI filtered -->
+    <div class="exp-campus">
+      <p class="exp-campus-label">Faculty of Arts &amp; Science (St. George) <span class="campus-tag">UTSG</span></p>
+      <div class="url-row">
+        <span class="url-box" id="artsciFilteredUrl">webcal://uoft.wuyilingwei.com/calendar/artsci-filtered.ics</span>
+        <button class="btn btn-copy" onclick="copyUrl('artsciFilteredUrl','artsciFilteredToast')">Copy</button>
+        <span class="toast" id="artsciFilteredToast">Copied!</span>
+      </div>
+      <div class="actions" style="margin-top:.6rem">
+        <a class="btn btn-primary" id="artsciFilteredAdd" href="webcal://uoft.wuyilingwei.com/calendar/artsci-filtered.ics">Add to Calendar</a>
+        <a class="btn btn-outline" id="artsciFilteredGcal" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fcalendar%2Fartsci-filtered.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
+      </div>
+    </div>
+
+    <!-- UTM filtered -->
+    <div class="exp-campus">
+      <p class="exp-campus-label">University of Toronto Mississauga <span class="campus-tag">UTM</span></p>
+      <div class="url-row">
+        <span class="url-box" id="utmFilteredUrl">webcal://uoft.wuyilingwei.com/calendar/utm-filtered.ics</span>
+        <button class="btn btn-copy" onclick="copyUrl('utmFilteredUrl','utmFilteredToast')">Copy</button>
+        <span class="toast" id="utmFilteredToast">Copied!</span>
+      </div>
+      <div class="actions" style="margin-top:.6rem">
+        <a class="btn btn-primary" id="utmFilteredAdd" href="webcal://uoft.wuyilingwei.com/calendar/utm-filtered.ics">Add to Calendar</a>
+        <a class="btn btn-outline" id="utmFilteredGcal" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fcalendar%2Futm-filtered.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
+      </div>
+    </div>
+
+    <!-- UTSC filtered -->
+    <div class="exp-campus">
+      <p class="exp-campus-label">University of Toronto Scarborough <span class="campus-tag">UTSC</span></p>
+      <div class="url-row">
+        <span class="url-box" id="utscFilteredUrl">webcal://uoft.wuyilingwei.com/calendar/utsc-filtered.ics</span>
+        <button class="btn btn-copy" onclick="copyUrl('utscFilteredUrl','utscFilteredToast')">Copy</button>
+        <span class="toast" id="utscFilteredToast">Copied!</span>
+      </div>
+      <div class="actions" style="margin-top:.6rem">
+        <a class="btn btn-primary" id="utscFilteredAdd" href="webcal://uoft.wuyilingwei.com/calendar/utsc-filtered.ics">Add to Calendar</a>
+        <a class="btn btn-outline" id="utscFilteredGcal" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fcalendar%2Futsc-filtered.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
       </div>
     </div>
   </div>
@@ -216,7 +293,7 @@
   // ── URL auto-detection ──────────────────────────────────────────────────────
   // Builds webcal/https URLs from the current origin so the page works on any
   // host (GitHub Pages, Cloudflare Pages, custom domain, localhost, etc.).
-  const FALLBACK_BASE = 'https://uoft.wuyilingwei.com/calender/';
+  const FALLBACK_BASE = 'https://uoft.wuyilingwei.com/calendar/';
 
   function resolveBase() {
     try {
@@ -248,6 +325,27 @@
       if (addBtn)  addBtn.href         = webcalUrl;
       if (gcalBtn) gcalBtn.href        = gcalUrl;
       if (urlBox)  urlBox.textContent  = webcalUrl;
+    });
+  });
+
+  // ── Filtered ICS URL auto-detection ─────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const base = resolveBase();
+    document.querySelectorAll('.campus-section[data-filtered-ics]').forEach(section => {
+      const file      = section.dataset.filteredIcs;
+      const campus    = file.replace('-filtered.ics', '');
+      const httpsUrl  = base + file;
+      const webcalUrl = httpsUrl.replace(/^https?:\/\//, 'webcal://');
+      const gcalUrl   = 'https://calendar.google.com/calendar/r?cid=' +
+                        encodeURIComponent(webcalUrl);
+
+      const urlBox  = document.getElementById(campus + 'FilteredUrl');
+      const addBtn  = document.getElementById(campus + 'FilteredAdd');
+      const gcalBtn = document.getElementById(campus + 'FilteredGcal');
+
+      if (urlBox)  urlBox.textContent = webcalUrl;
+      if (addBtn)  addBtn.href        = webcalUrl;
+      if (gcalBtn) gcalBtn.href       = gcalUrl;
     });
   });
 

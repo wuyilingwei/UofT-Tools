@@ -45,7 +45,7 @@ ARTSCI_URL = "https://www.artsci.utoronto.ca/current/dates-deadlines/academic-da
 TORONTO_TZ = pytz.timezone("America/Toronto")
 
 SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "ics"
+OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "calendar"
 OUTPUT_FILE = OUTPUT_DIR / "artsci.ics"
 
 log = logging.getLogger(__name__)
