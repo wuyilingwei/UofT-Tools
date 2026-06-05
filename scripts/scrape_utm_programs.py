@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 
 SCRIPT_DIR   = Path(__file__).parent
 OUTPUT_DIR   = SCRIPT_DIR.parent / "public" / "planner" / "data"
@@ -89,8 +89,11 @@ def parse_program(path: str) -> dict | None:
     main = soup.find(id="main-content") or soup.find("main") or soup.find("body")
     text = main.get_text(separator="\n") if main else ""
 
-    # Extract all course codes mentioned anywhere in the page
+    # Extract all course codes mentioned anywhere in the page (flat list for Jaccard)
     course_codes = sorted(set(COURSE_RE.findall(text)))
+
+    # Extract structured requirement groups
+    requirementGroups = _parse_requirement_groups(soup)
 
     # Extract the program ID from path (/program/ermaj1688 → ermaj1688)
     prog_id = path.lstrip("/program/")
@@ -102,7 +105,142 @@ def parse_program(path: str) -> dict | None:
         "type":     prog_type,
         "code":     code,
         "courses":  course_codes,
+        "requirementGroups": requirementGroups,
     }
+
+
+def _parse_requirement_groups(soup) -> dict:
+    """Parse structured enrolment/completion requirements from Drupal fields.
+
+    Returns: {
+      "enrolment": {"sections": [{"label": str, "groups": [[[str]]]}]},
+      "completion": {"sections": [{"label": str, "groups": [[[str]]]}]}
+    }
+    Each section has a label (e.g. "First Year:") and groups.
+    groups is a list of requirement lines; each line is a list of alternatives.
+    [[[a,b],[c]]] means "you must take (a AND b) OR (c)".
+    """
+    result = {"enrolment": {"sections": []}, "completion": {"sections": []}}
+
+    for field_class, key in [
+        ("field-enrolment-requirements", "enrolment"),
+        ("field-completion-req", "completion"),
+    ]:
+        field = soup.find(class_=re.compile(field_class))
+        if not field:
+            continue
+        content_div = field.find(class_="field__item")
+        if not content_div:
+            continue
+
+        sections = []
+        current_label = ""
+        current_groups = []
+        in_notes = False
+
+        for el in content_div.children:
+            if isinstance(el, NavigableString):
+                continue
+            tag = el.name.lower() if hasattr(el, 'name') else ''
+            txt = el.get_text(strip=True)
+
+            if tag in ('br', 'hr'):
+                continue
+
+            if tag == 'p' or tag == 'strong':
+                strong = el.find('strong') if tag == 'p' else el
+                label = strong.get_text(strip=True) if strong and tag == 'p' else txt
+
+                # Check if this is a notes section
+                if label and re.match(r'^(NOTES?|Notes?)\b', label):
+                    in_notes = True
+                    continue
+
+                # Heading/descriptive paragraph
+                if label and not in_notes:
+                    # Flush previous section
+                    if current_label and current_groups:
+                        sections.append({"label": current_label, "groups": current_groups})
+                    current_label = label
+                    current_groups = []
+
+            elif tag == 'ol':
+                if in_notes:
+                    continue
+                if not current_label:
+                    current_label = key.capitalize() + " Requirements"
+                for li in el.find_all('li', recursive=False):
+                    item_groups = _parse_list_item(li)
+                    if item_groups:
+                        current_groups.append(item_groups)
+
+        # Flush final section
+        if current_label and current_groups:
+            sections.append({"label": current_label, "groups": current_groups})
+
+        result[key]["sections"] = sections
+
+    return result
+
+
+def _parse_list_item(li) -> list[list[str]]:
+    """Parse a single <li> into requirement groups.
+
+    Walks the children of <li> in order, tracking <a> codes and the text
+    between them to determine AND vs OR relationships.
+
+    Returns a list of groups, where each group is a list of course codes.
+    Outer list = OR (pick one group); inner list = AND (must take all).
+
+    Example: "(CSC108H5 and MAT102H5) or CSC110Y5"
+      → [["CSC108H5", "MAT102H5"], ["CSC110Y5"]]
+    Example: "CSC207H5 and CSC236H5"
+      → [["CSC207H5", "CSC236H5"]]
+    """
+
+    def _walk_children(el):
+        """Walk direct children of el, collecting codes and their joiners."""
+        items = []  # list of ("code", joiner_text_before)
+        prev_text = ""
+        for child in el.children:
+            if hasattr(child, 'name') and child.name == 'a':
+                m = COURSE_RE.search(child.get('href', ''))
+                if m:
+                    items.append((m.group(1), prev_text))
+                    prev_text = ""
+            elif isinstance(child, NavigableString):
+                prev_text += str(child)
+            elif hasattr(child, 'name'):
+                # Recurse into nested elements (strong, em, sub, sup, etc.)
+                sub = _walk_children(child)
+                if sub:
+                    # Merge sub-items: join last item's text with this joiner
+                    for code, joiner in sub:
+                        items.append((code, prev_text + joiner if prev_text else joiner))
+                        prev_text = ""
+        return items
+
+    items = _walk_children(li)
+    if not items:
+        codes = COURSE_RE.findall(li.get_text())
+        if not codes:
+            return []
+        return [codes]
+
+    # Build groups based on "or" separators
+    groups = []
+    current_group = []
+    for code, joiner in items:
+        joiner_lower = joiner.lower()
+        if 'or' in joiner_lower and current_group:
+            groups.append(current_group)
+            current_group = [code]
+        else:
+            current_group.append(code)
+    if current_group:
+        groups.append(current_group)
+
+    return groups
 
 
 def main() -> None:

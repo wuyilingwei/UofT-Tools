@@ -145,6 +145,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .empty-state{text-align:center;padding:40px 20px;color:var(--gray-600)}
 .empty-state p{margin-top:6px;font-size:13px}
 .notice{background:#fff3cd;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:12px;color:#856404;margin-bottom:10px}
+
+/* ── Requirements view ── */
+.view-toggle{display:flex;gap:6px;margin-bottom:14px}
+.view-btn{padding:4px 10px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;font-size:12px;cursor:pointer;color:var(--gray-600);transition:.1s}
+.view-btn:hover{background:var(--gray-100)}
+.view-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+.req-prog-block{margin-bottom:22px}
+.req-prog-header{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--blue);padding-bottom:6px;border-bottom:1px solid var(--gray-200);margin-bottom:6px}
+.req-kind-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500);margin:10px 0 4px}
+.req-sec-label{font-size:12px;font-weight:600;color:var(--gray-700);margin:6px 0 3px;padding-left:2px}
+.req-line{display:flex;align-items:flex-start;gap:5px;padding:2px 0}
+.req-status{font-size:12px;min-width:16px;color:var(--gray-400);padding-top:3px}
+.req-line.met .req-status{color:var(--green)}
+.req-alts{display:flex;flex-wrap:wrap;align-items:center;gap:3px;font-size:12px}
+.req-alt{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:4px;border:1px solid var(--gray-200);background:var(--gray-50)}
+.req-alt.met{background:#dcfce7;border-color:#86efac}
+.req-alt.partial{background:#fef9c3;border-color:#fde047}
+.req-alt .rc{font-family:monospace;font-weight:600;font-size:12px;cursor:pointer}
+.req-alt .rc:hover{text-decoration:underline}
+.req-alt .rc.done{text-decoration:line-through;opacity:.5}
+.req-sep{font-size:11px;color:var(--gray-500);font-style:italic;padding:0 2px}
+.req-plus{font-size:10px;color:var(--gray-400);margin:0 1px}
 </style>
 </head>
 <body>
@@ -179,7 +201,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
           <div class="prog-popup" id="prog-popup"></div>
         </div>
         <div class="intention-row">
-          <label><input type="checkbox" id="show-intention-toggle" onchange="renderCourseTable()"> Show intention programs (dashed)</label>
+          <label><input type="checkbox" id="show-intention-toggle" onchange="renderCourseArea()"> Show intention programs (dashed)</label>
         </div>
       </div>
     </div>
@@ -275,6 +297,7 @@ const state = {
   prefs: {density:'compact', time:'any', freeDays:new Set(), busyDays:new Set()},
   scheduledCourses: [],  // course codes picked in schedule tab
   scheduleResult:  [],   // [{code,name,section,times,color,conflict}]
+  viewMode: 'list',      // 'list' | 'requirements'
 };
 
 // ═══════════════════════════════ INIT ═══════════════════════════════
@@ -293,7 +316,7 @@ async function init() {
   // Load course prereq/exclusion data in the background — non-blocking
   fetch(BASE + '/planner/data/utm-courses.json')
     .then(r => r.ok ? r.json() : null)
-    .then(data => { if (data) { state.courses = data; renderCourseTable(); } })
+    .then(data => { if (data) { state.courses = data; renderCourseArea(); } })
     .catch(() => {});
 }
 
@@ -378,7 +401,7 @@ function toggleProgram(id) {
   }
   renderProgramPopup();
   renderChips();
-  renderCourseTable();
+  renderCourseArea();
   renderSuggestions();
   refreshCoursePicks();
 }
@@ -416,7 +439,7 @@ function renderChips() {
 
 function toggleIntention(id) {
   const p = state.selectedPrograms.find(p => p.id === id);
-  if (p) { p.intention = !p.intention; renderChips(); renderCourseTable(); }
+  if (p) { p.intention = !p.intention; renderChips(); renderCourseArea(); }
 }
 
 function renderLegality() {
@@ -502,7 +525,7 @@ function renderCourseTable() {
     return;
   }
   if (!courses.length) {
-    area.innerHTML = '<div class="empty-state"><p>No course data found for selected programs.</p></div>';
+    area.innerHTML = viewToggleHTML() + '<div class="empty-state"><p>No course data found for selected programs.</p></div>';
     return;
   }
 
@@ -512,7 +535,7 @@ function renderCourseTable() {
   // Build set of all course codes across selected programs for exclusion checking
   const allSelectedCodes = new Set(courses.map(c => c.code));
 
-  area.innerHTML = `
+  area.innerHTML = viewToggleHTML() + `
     <div class="course-stats">
       <span class="stat stat-total">📋 ${courses.length} total</span>
       <span class="stat stat-pending">⏳ ${pending} pending</span>
@@ -570,6 +593,79 @@ function renderCourseTable() {
     </table>`;
 }
 
+function viewToggleHTML() {
+  return `<div class="view-toggle">
+    <button class="view-btn ${state.viewMode==='list'?'active':''}" onclick="switchViewMode('list')">Course List</button>
+    <button class="view-btn ${state.viewMode==='requirements'?'active':''}" onclick="switchViewMode('requirements')">Requirements</button>
+  </div>`;
+}
+
+function switchViewMode(mode) {
+  state.viewMode = mode;
+  renderCourseArea();
+}
+
+function renderCourseArea() {
+  if (state.viewMode === 'requirements') renderRequirementsView();
+  else renderCourseTable();
+}
+
+function renderRequirementsView() {
+  const area = document.getElementById('course-area');
+  const active = state.selectedPrograms.filter(p => !p.intention);
+
+  if (!state.selectedPrograms.length) {
+    area.innerHTML = '<div class="empty-state"><div style="font-size:36px">📚</div><p>Select a subject from the left, then add a program.</p></div>';
+    return;
+  }
+  if (!active.length) {
+    area.innerHTML = viewToggleHTML() + '<div class="empty-state"><p>All programs are in intention mode.</p></div>';
+    return;
+  }
+
+  let html = viewToggleHTML();
+  for (const prog of active) {
+    const rg = prog.requirementGroups;
+    const hasReqs = rg && ((rg.enrolment?.sections?.length) || (rg.completion?.sections?.length));
+    html += `<div class="req-prog-block">
+      <div class="req-prog-header">${prog.name} <span class="badge ${badgeClass(prog.type)}">${prog.type}</span></div>`;
+    if (!hasReqs) {
+      html += '<div style="font-size:12px;color:var(--gray-500);font-style:italic;padding:4px 0">No structured requirements available.</div>';
+    } else {
+      for (const [kind, kindLabel] of [['enrolment','Enrolment Requirements'],['completion','Completion Requirements']]) {
+        const sections = rg[kind]?.sections || [];
+        if (!sections.length) continue;
+        html += `<div class="req-kind-label">${kindLabel}</div>`;
+        for (const sec of sections) {
+          if (sec.label) html += `<div class="req-sec-label">${sec.label}</div>`;
+          for (const groups of sec.groups) html += buildReqLineHTML(groups);
+        }
+      }
+    }
+    html += '</div>';
+  }
+  area.innerHTML = html;
+}
+
+function buildReqLineHTML(groups) {
+  const alts = groups.map(andGroup => {
+    const done = andGroup.filter(c => state.completedCourses.has(c)).length;
+    return {andGroup, done, total: andGroup.length, met: done === andGroup.length};
+  });
+  const lineMet = alts.some(a => a.met);
+  const altsHTML = alts.map((alt, i) => {
+    const cls = alt.met ? 'met' : alt.done > 0 ? 'partial' : '';
+    const codesHTML = alt.andGroup.map(c =>
+      `<span class="rc${state.completedCourses.has(c)?' done':''}" onclick="toggleCompleted('${c}')" title="Click to toggle">${c}</span>`
+    ).join('<span class="req-plus">+</span>');
+    return (i > 0 ? '<span class="req-sep">or</span>' : '') + `<span class="req-alt ${cls}">${codesHTML}</span>`;
+  }).join('');
+  return `<div class="req-line${lineMet?' met':''}">
+    <span class="req-status">${lineMet ? '✓' : '○'}</span>
+    <div class="req-alts">${altsHTML}</div>
+  </div>`;
+}
+
 function courseYear(code) {
   const m = code.match(/\d{3}/);
   if (!m) return null;
@@ -580,7 +676,7 @@ function toggleCompleted(code) {
   if (state.completedCourses.has(code)) state.completedCourses.delete(code);
   else state.completedCourses.add(code);
   localStorage.setItem('utm_completed', JSON.stringify([...state.completedCourses]));
-  renderCourseTable();
+  renderCourseArea();
   refreshCoursePicks();
 }
 
@@ -622,7 +718,7 @@ function addSuggested(id) {
   const prog = findProgramById(id);
   if (prog && !state.selectedPrograms.find(p => p.id === id)) {
     state.selectedPrograms.push({...prog, intention: false});
-    renderChips(); renderCourseTable(); renderSuggestions(); refreshCoursePicks();
+    renderChips(); renderCourseArea(); renderSuggestions(); refreshCoursePicks();
   }
 }
 
