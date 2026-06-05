@@ -9,7 +9,7 @@ ICS calendar file.
 Data source : https://www.artsci.utoronto.ca/current/dates-deadlines/academic-dates
 Technique   : Playwright headless Chromium + BeautifulSoup
               (dates are inside click-to-expand Bootstrap panels)
-Output      : docs/artsci.ics  (all-day VEVENT entries)
+Output      : public/ics/artsci.ics  (all-day VEVENT entries)
 
 NOT AN OFFICIAL UNIVERSITY OF TORONTO / ARTSCI PRODUCT.
 This is a student convenience tool.  Always verify dates with the official page.
@@ -45,7 +45,7 @@ ARTSCI_URL = "https://www.artsci.utoronto.ca/current/dates-deadlines/academic-da
 TORONTO_TZ = pytz.timezone("America/Toronto")
 
 SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "docs" / "ics"
+OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "ics"
 OUTPUT_FILE = OUTPUT_DIR / "artsci.ics"
 
 log = logging.getLogger(__name__)

@@ -8,7 +8,7 @@ Registrar's Office and generates a standards-compliant ICS calendar file.
 Data source : https://www.utm.utoronto.ca/registrar/dates
 Technique   : Playwright headless Chromium (dates are rendered by an Elfsight
               JavaScript widget and are not present in the raw HTML)
-Output      : docs/utm.ics  (all-day VEVENT entries)
+Output      : public/ics/utm.ics  (all-day VEVENT entries)
 
 NOT AN OFFICIAL UNIVERSITY OF TORONTO / UTM PRODUCT.
 This is a student convenience tool.  Always verify dates with the official page.
@@ -46,7 +46,7 @@ TORONTO_TZ = pytz.timezone("America/Toronto")
 ELFSIGHT_APP_CLASS = "elfsight-app-f242be0e-1d36-4aef-8bbf-d260c4c8f05e"
 
 SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "docs" / "ics"
+OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "ics"
 OUTPUT_FILE = OUTPUT_DIR / "utm.ics"
 
 # ---------------------------------------------------------------------------

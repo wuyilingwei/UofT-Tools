@@ -7,7 +7,7 @@ Registrar's Office and generates a standards-compliant ICS calendar file.
 
 Data source : https://www.utsc.utoronto.ca/registrar/academic-dates
 Technique   : requests + BeautifulSoup (dates are in static HTML tables)
-Output      : docs/utsc.ics  (all-day VEVENT entries)
+Output      : public/ics/utsc.ics  (all-day VEVENT entries)
 
 NOT AN OFFICIAL UNIVERSITY OF TORONTO / UTSC PRODUCT.
 This is a student convenience tool. Always verify dates with the official page.
@@ -43,7 +43,7 @@ UTSC_HUB_URL = "https://www.utsc.utoronto.ca/registrar/academic-dates"
 TORONTO_TZ = pytz.timezone("America/Toronto")
 
 SCRIPT_DIR = Path(__file__).parent
-OUTPUT_DIR = SCRIPT_DIR.parent / "docs" / "ics"
+OUTPUT_DIR = SCRIPT_DIR.parent / "public" / "ics"
 OUTPUT_FILE = OUTPUT_DIR / "utsc.ics"
 
 # Session sub-page URL patterns (relative path portion):
