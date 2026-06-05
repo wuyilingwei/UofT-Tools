@@ -534,7 +534,7 @@ function renderLegality() {
     messages.push(`⚠ ${s.length} specialists — UTM normally allows only 1.`);
   }
 
-  // Rule: specialist + major in the same subject area is usually redundant
+  // Rule: same subject area in multiple types is not allowed
   const areas = new Map();
   for (const p of active) {
     const area = p.name.split(' - ')[0] || p.name;
@@ -542,10 +542,10 @@ function renderLegality() {
     areas.get(area).add((p.type||'').toLowerCase());
   }
   for (const [area, types] of areas) {
-    const hasSpec = [...types].some(t => t.includes('specialist'));
-    const hasMaj  = [...types].some(t => t.includes('major'));
-    if (hasSpec && hasMaj) {
-      messages.push(`⚠ "${area}" has both specialist and major — pick one.`);
+    const count = [...types];
+    if (count.length > 1) {
+      const typeList = count.map(t => t.includes('specialist')?'Specialist':t.includes('major')?'Major':'Minor').join(' + ');
+      messages.push(`⚠ "${area}" has ${typeList} — cannot register multiple types in the same subject.`);
     }
   }
 

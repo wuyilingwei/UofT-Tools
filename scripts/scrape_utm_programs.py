@@ -117,6 +117,53 @@ def _course_codes(text: str) -> list[str]:
     return [_normalize_course_code(c) for c in COURSE_RE.findall(text or "")]
 
 
+def _parse_paragraph_for_codes(el) -> list[list[str]]:
+    """Walk a <p> or similar block element and extract course codes with OR/AND grouping.
+
+    Uses the same _walk_children logic as _parse_list_item but operates on
+    any block-level element (p, div, etc.) instead of just <li>.
+    """
+    def _walk_children(el):
+        items = []  # list of ("code", joiner_text_before)
+        prev_text = ""
+        for child in el.children:
+            if hasattr(child, 'name') and child.name == 'a':
+                codes = _course_codes(child.get_text(" ") + " " + child.get('href', ''))
+                if codes:
+                    items.append((codes[0], prev_text))
+                    prev_text = ""
+            elif isinstance(child, NavigableString):
+                prev_text += str(child)
+            elif hasattr(child, 'name'):
+                sub = _walk_children(child)
+                if sub:
+                    for code, joiner in sub:
+                        items.append((code, prev_text + joiner if prev_text else joiner))
+                        prev_text = ""
+        return items
+
+    items = _walk_children(el)
+    if not items:
+        codes = _course_codes(el.get_text(" "))
+        if not codes:
+            return []
+        return [codes]
+
+    # Build groups based on "or" separators in joiner text
+    groups = []
+    current_group = []
+    for code, joiner in items:
+        joiner_lower = joiner.lower()
+        if 'or' in joiner_lower and current_group:
+            groups.append(current_group)
+            current_group = [code]
+        else:
+            current_group.append(code)
+    if current_group:
+        groups.append(current_group)
+    return groups
+
+
 def _parse_requirement_groups(soup) -> dict:
     """Parse structured enrolment/completion requirements from Drupal fields.
 
@@ -144,7 +191,6 @@ def _parse_requirement_groups(soup) -> dict:
         sections = []
         current_label = ""
         current_groups = []
-        in_notes = False
 
         for el in content_div.children:
             if isinstance(el, NavigableString):
@@ -155,29 +201,62 @@ def _parse_requirement_groups(soup) -> dict:
             if tag in ('br', 'hr'):
                 continue
 
-            if tag == 'p' or tag == 'strong':
+            if tag in ('p', 'strong'):
                 strong = el.find('strong') if tag == 'p' else el
                 label = strong.get_text(strip=True) if strong and tag == 'p' else txt
+                has_course_links = bool(el.find_all('a')) and COURSE_RE.search(el.get_text(" "))
 
                 # Check if this is a notes section
                 if label and re.match(r'^(NOTES?|Notes?)\b', label):
-                    in_notes = True
                     continue
 
-                # Non-notes heading — reset notes flag
-                in_notes = False
+                # Does this paragraph have a <strong> that looks like a section heading?
+                is_heading = bool(
+                    label and tag == 'p' and strong
+                    and re.search(r'(Year|Credits|[0-9]+\.[0-9]+)', label)
+                )
 
-                # Heading/descriptive paragraph
-                if label and not in_notes:
+                if is_heading:
                     # Flush previous section
                     if current_label and current_groups:
                         sections.append({"label": current_label, "groups": current_groups})
                     current_label = label
                     current_groups = []
+                    # Also extract course links from this heading paragraph
+                    if has_course_links:
+                        groups = _parse_paragraph_for_codes(el)
+                        if groups:
+                            current_groups.append(groups)
 
-            elif tag == 'ol':
-                if in_notes:
-                    continue
+                # <p> with course links but no strong heading — plain requirement line
+                elif tag == 'p' and (not strong) and has_course_links:
+                    groups = _parse_paragraph_for_codes(el)
+                    if groups:
+                        if not current_label:
+                            current_label = key.capitalize() + " Requirements"
+                        current_groups.append(groups)
+
+                # <p> with strong + course links that is NOT a year/credits heading
+                # (e.g. "Limited Enrolment" with embedded course references)
+                elif tag == 'p' and strong and has_course_links and not is_heading:
+                    groups = _parse_paragraph_for_codes(el)
+                    if groups:
+                        if current_label and current_groups:
+                            sections.append({"label": current_label, "groups": current_groups})
+                        current_label = label if label else key.capitalize() + " Requirements"
+                        current_groups = [groups]
+
+                # Plain <strong> or heading <p> without course links — just set label
+                elif label and not has_course_links:
+                    # Skip labels that are just conjunctions or noise
+                    if re.match(r'^(and|or|also|including|such as)$', label, re.IGNORECASE):
+                        continue
+                    if current_label and current_groups:
+                        sections.append({"label": current_label, "groups": current_groups})
+                    current_label = label
+                    current_groups = []
+
+            elif tag in ('ol', 'ul'):
                 if not current_label:
                     current_label = key.capitalize() + " Requirements"
                 for li in el.find_all('li', recursive=False):
