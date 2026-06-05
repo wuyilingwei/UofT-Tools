@@ -66,14 +66,24 @@ def parse_program(path: str) -> dict | None:
     url  = CALENDAR_URL + path
     soup = fetch_html(url)
 
-    title_el = soup.find("h1") or soup.find("title")
+    # The first <h1> is the global site "Academic Calendar" header.
+    # The <title> tag has the real name: "Anthropology - Major (Science) - ERMAJ0105 | Academic Calendar"
+    title_el = soup.find("title")
     if not title_el:
         return None
-    title = title_el.get_text(strip=True)
+    title = title_el.get_text(strip=True).removesuffix(" | Academic Calendar")
 
-    # Extract program type from title
-    m = PROGRAM_TYPE_RE.search(title)
-    prog_type = m.group(1).capitalize() if m else "Program"
+    # Parse: "Anthropology - Major (Science) - ERMAJ0105"
+    # or "Biology for Health Sciences - Major (Science) - ERMAJ0123"
+    parts = [p.strip() for p in title.rsplit(" - ", 2)]
+    if len(parts) == 3:
+        name, type_part, code = parts
+        m = PROGRAM_TYPE_RE.search(type_part)
+        prog_type = m.group(1).capitalize() if m else "Program"
+    else:
+        name = title
+        prog_type = "Program"
+        code = path.lstrip("/program/")
 
     # Main content text
     main = soup.find(id="main-content") or soup.find("main") or soup.find("body")
@@ -88,8 +98,9 @@ def parse_program(path: str) -> dict | None:
     return {
         "id":       prog_id,
         "path":     path,
-        "name":     title,
+        "name":     name,
         "type":     prog_type,
+        "code":     code,
         "courses":  course_codes,
     }
 

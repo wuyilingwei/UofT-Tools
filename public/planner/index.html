@@ -172,6 +172,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
     <div class="prog-header">
       <h2>Selected Programs</h2>
       <div class="prog-list" id="prog-chips"></div>
+      <div id="prog-legality" style="font-size:12px;margin-bottom:6px"></div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <div class="prog-dropdown" id="prog-dropdown">
           <button class="prog-dropdown-btn" onclick="toggleProgramDropdown()">+ Add program</button>
@@ -352,7 +353,7 @@ function renderProgramPopup() {
     const sel = state.selectedPrograms.find(s => s.id === p.id);
     const badge = badgeClass(p.type);
     return `<div class="prog-popup-item ${sel?'selected':''}" onclick="toggleProgram('${p.id}')">
-      <span>${p.name.split(' - ')[0] || p.name}</span>
+      <span>${p.name} <span style="font-size:11px;color:var(--gray-600)">${p.code||''}</span></span>
       <span class="badge ${badge}">${p.type}</span>
     </div>`;
   }).join('');
@@ -395,6 +396,7 @@ function renderChips() {
   const container = document.getElementById('prog-chips');
   if (!state.selectedPrograms.length) {
     container.innerHTML = '<span style="font-size:12px;color:var(--gray-600)">No programs selected</span>';
+    document.getElementById('prog-legality').innerHTML = '';
     return;
   }
   container.innerHTML = state.selectedPrograms.map(p => {
@@ -403,16 +405,78 @@ function renderChips() {
               : (p.type||'').toLowerCase().includes('specialist') ? 'specialist' : 'major';
     const shortName = p.name.split(' - ')[0] || p.name;
     return `<div class="prog-chip ${cls} ${p.intention?'intention':''}"
-                 title="${p.intention?'Intention (planning)':p.type}">
+                 title="${p.intention?'Intention (planning)':p.type + ' — ' + (p.code||'')}">
       <span onclick="toggleIntention('${p.id}')" title="Toggle intention">${shortName}</span>
+      <span style="font-size:10px;opacity:.7">${p.code||''}</span>
       <span class="chip-x" onclick="toggleProgram('${p.id}')">×</span>
     </div>`;
   }).join('');
+  renderLegality();
 }
 
 function toggleIntention(id) {
   const p = state.selectedPrograms.find(p => p.id === id);
   if (p) { p.intention = !p.intention; renderChips(); renderCourseTable(); }
+}
+
+function renderLegality() {
+  const el = document.getElementById('prog-legality');
+  const active = state.selectedPrograms.filter(p => !p.intention);
+  if (!active.length) { el.innerHTML = ''; return; }
+
+  const messages = [];
+
+  // Count types
+  const specialists = active.filter(p => (p.type||'').toLowerCase().includes('specialist'));
+  const majors = active.filter(p => (p.type||'').toLowerCase().includes('major'));
+  const minors = active.filter(p => (p.type||'').toLowerCase().includes('minor'));
+
+  // Rule: at most 1 specialist
+  if (specialists.length > 1) {
+    messages.push(`⚠ ${specialists.length} specialists selected — UTM normally allows only 1.`);
+  }
+
+  // Rule: specialist + major in the same subject area is usually redundant
+  const subjectAreas = new Map(); // area → {specialist,major,minor}
+  for (const p of active) {
+    const area = p.name.split(' - ')[0] || p.name;
+    if (!subjectAreas.has(area)) subjectAreas.set(area, new Set());
+    subjectAreas.get(area).add((p.type||'').toLowerCase());
+  }
+  for (const [area, types] of subjectAreas) {
+    const spec = [...types].some(t => t.includes('specialist'));
+    const maj  = [...types].some(t => t.includes('major'));
+    if (spec && maj) {
+      messages.push(`⚠ "${area}" has both specialist and major — typically you'd pick one or the other.`);
+    }
+  }
+
+  if (!messages.length) {
+    // Check typical combo: 1 specialist OR 2 majors OR 1 major + 2 minors
+    const typeCount = {};
+    for (const p of active) {
+      const t = (p.type||'').toLowerCase();
+      typeCount[t] = (typeCount[t]||0) + 1;
+    }
+    let verdict = '';
+    const nSpec = typeCount['specialist']||0, nMaj = typeCount['major']||0, nMin = typeCount['minor']||0;
+    // Only show positive confirmation if it looks intentional
+    if (nSpec === 1 && nMaj === 0 && nMin <= 2) {
+      verdict = '1 specialist ' + (nMin ? `+ ${nMin} minor(s)` : '') + ' — standard UTM pattern';
+    } else if (nSpec === 0 && nMaj <= 2 && nMin <= 2) {
+      verdict = (nMaj ? `${nMaj} major(s)` : '') + (nMaj&&nMin?' + ':'') + (nMin ? `${nMin} minor(s)` : '') + ' — looks fine';
+    } else if (nSpec === 0 && nMaj === 0 && nMin <= 3) {
+      verdict = `${nMin} minor(s) — ok`;
+    }
+    if (verdict) {
+      el.innerHTML = `<span style="color:var(--green)">✓ ${verdict}</span>`;
+      return;
+    }
+    el.innerHTML = '';
+    return;
+  }
+
+  el.innerHTML = messages.map(m => `<span style="color:#856404">${m}</span><br>`).join('');
 }
 
 // ═══════════════════════════════ COURSE TABLE ════════════════════════
