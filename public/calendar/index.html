@@ -109,11 +109,11 @@
         <h3>&#128225; Subscribe (auto-updates daily)</h3>
         <p>Webcal feed &mdash; updates automatically.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/ics/artsci.ics">Add to Calendar</a>
+          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calender/artsci.ics">Add to Calendar</a>
           <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fics%2Fartsci.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
         </div>
         <div class="url-row">
-          <span class="url-box" id="artsciUrl">webcal://uoft.wuyilingwei.com/ics/artsci.ics</span>
+          <span class="url-box" id="artsciUrl">webcal://uoft.wuyilingwei.com/calender/artsci.ics</span>
           <button class="btn btn-copy" onclick="copyUrl('artsciUrl','artsciToast')">Copy</button>
           <span class="toast" id="artsciToast">Copied!</span>
         </div>
@@ -139,11 +139,11 @@
         <h3>&#128225; Subscribe (auto-updates daily)</h3>
         <p>Webcal feed &mdash; updates automatically.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/ics/utm.ics">Add to Calendar</a>
+          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calender/utm.ics">Add to Calendar</a>
           <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fics%2Futm.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
         </div>
         <div class="url-row">
-          <span class="url-box" id="utmUrl">webcal://uoft.wuyilingwei.com/ics/utm.ics</span>
+          <span class="url-box" id="utmUrl">webcal://uoft.wuyilingwei.com/calender/utm.ics</span>
           <button class="btn btn-copy" onclick="copyUrl('utmUrl','utmToast')">Copy</button>
           <span class="toast" id="utmToast">Copied!</span>
         </div>
@@ -169,11 +169,11 @@
         <h3>&#128225; Subscribe (auto-updates daily)</h3>
         <p>Webcal feed &mdash; updates automatically.</p>
         <div class="actions">
-          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/ics/utsc.ics">Add to Calendar</a>
+          <a class="btn btn-primary" href="webcal://uoft.wuyilingwei.com/calender/utsc.ics">Add to Calendar</a>
           <a class="btn btn-outline" href="https://calendar.google.com/calendar/r?cid=webcal%3A%2F%2Fuoft.wuyilingwei.com%2Fics%2Futsc.ics" target="_blank" rel="noopener noreferrer">+ Google Calendar</a>
         </div>
         <div class="url-row">
-          <span class="url-box" id="utscUrl">webcal://uoft.wuyilingwei.com/ics/utsc.ics</span>
+          <span class="url-box" id="utscUrl">webcal://uoft.wuyilingwei.com/calender/utsc.ics</span>
           <button class="btn btn-copy" onclick="copyUrl('utscUrl','utscToast')">Copy</button>
           <span class="toast" id="utscToast">Copied!</span>
         </div>
@@ -216,7 +216,7 @@
   // ── URL auto-detection ──────────────────────────────────────────────────────
   // Builds webcal/https URLs from the current origin so the page works on any
   // host (GitHub Pages, Cloudflare Pages, custom domain, localhost, etc.).
-  const FALLBACK_BASE = 'https://uoft.wuyilingwei.com/ics/';
+  const FALLBACK_BASE = 'https://uoft.wuyilingwei.com/calender/';
 
   function resolveBase() {
     try {
