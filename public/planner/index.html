@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UTM Course Planner — UofT Tools</title>
+<style>
+:root{
+  --blue:#002A5C;--blue-light:#1a4a7a;--teal:#007FA3;
+  --green:#198754;--amber:#ffc107;--red:#dc3545;
+  --gray-50:#f8f9fa;--gray-100:#e9ecef;--gray-200:#dee2e6;
+  --gray-600:#6c757d;--gray-800:#343a40;
+  --radius:8px;--shadow:0 2px 8px rgba(0,0,0,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;color:var(--gray-800);background:#fff}
+
+/* ── Header ── */
+.site-header{background:var(--blue);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:16px}
+.site-header a{color:rgba(255,255,255,.75);text-decoration:none;font-size:13px}
+.site-header a:hover{color:#fff}
+.site-header h1{font-size:18px;font-weight:600;flex:1}
+
+/* ── Tabs ── */
+.tabs{border-bottom:2px solid var(--gray-200);background:var(--gray-50);display:flex;padding:0 20px;gap:4px}
+.tab-btn{padding:10px 18px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:var(--gray-600);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-btn:hover:not(.active){color:var(--blue-light)}
+.tab-panel{display:none}
+.tab-panel.active{display:flex;height:calc(100vh - 94px)}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;background:var(--gray-50)}
+.sidebar-search{padding:10px;border-bottom:1px solid var(--gray-200)}
+.sidebar-search input{width:100%;padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none}
+.sidebar-search input:focus{border-color:var(--teal)}
+.section-list{overflow-y:auto;flex:1}
+.section-item{display:block;width:100%;text-align:left;padding:7px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--gray-800);border-left:3px solid transparent;transition:.1s}
+.section-item:hover{background:var(--gray-100)}
+.section-item.active{background:#e8f4f8;border-left-color:var(--teal);color:var(--blue);font-weight:500}
+
+/* ── Main content ── */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* ── Program selector ── */
+.prog-header{padding:14px 18px;border-bottom:1px solid var(--gray-200);background:#fff}
+.prog-header h2{font-size:15px;font-weight:600;margin-bottom:6px}
+.prog-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:30px}
+.prog-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.1s}
+.prog-chip.major{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
+.prog-chip.minor{background:#dcfce7;border-color:#86efac;color:#166534}
+.prog-chip.specialist{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+.prog-chip.intention{opacity:.6;border-style:dashed}
+.prog-chip .chip-x{font-size:14px;line-height:1;margin-left:2px}
+.prog-chip .chip-x:hover{opacity:.7}
+
+.prog-dropdown{position:relative}
+.prog-dropdown-btn{padding:5px 12px;border:1px dashed var(--gray-200);border-radius:20px;background:#fff;cursor:pointer;font-size:12px;color:var(--gray-600)}
+.prog-dropdown-btn:hover{border-color:var(--teal);color:var(--teal)}
+.prog-popup{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);z-index:100;width:300px;max-height:260px;overflow-y:auto;display:none}
+.prog-popup.open{display:block}
+.prog-popup-item{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;cursor:pointer;font-size:13px}
+.prog-popup-item:hover{background:var(--gray-50)}
+.prog-popup-item .badge{font-size:11px;padding:2px 6px;border-radius:10px;font-weight:500}
+.badge-major{background:#dbeafe;color:#1e40af}
+.badge-minor{background:#dcfce7;color:#166534}
+.badge-specialist{background:#fef3c7;color:#92400e}
+.prog-popup-item.selected{background:#f0f9ff}
+.intention-row{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:var(--gray-600)}
+.intention-row label{cursor:pointer;display:flex;align-items:center;gap:4px}
+
+/* ── Course table ── */
+.course-area{flex:1;padding:14px 18px;overflow-y:auto}
+.course-area h3{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--gray-800)}
+.course-stats{display:flex;gap:14px;margin-bottom:12px;font-size:12px}
+.stat{padding:5px 10px;border-radius:6px;font-weight:500}
+.stat-pending{background:#fff3cd;color:#856404}
+.stat-done{background:#d1fae5;color:#065f46}
+.stat-total{background:var(--gray-100);color:var(--gray-600)}
+
+.course-table{width:100%;border-collapse:collapse;font-size:13px}
+.course-table th{text-align:left;padding:7px 10px;background:var(--gray-50);border-bottom:2px solid var(--gray-200);font-weight:600;font-size:12px;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px}
+.course-table td{padding:6px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
+.course-table tr:hover td{background:var(--gray-50)}
+.course-table tr.done td{opacity:.55}
+.course-code{font-family:monospace;font-weight:600;font-size:13px}
+.programs-tags{display:flex;flex-wrap:wrap;gap:3px}
+.ptag{font-size:11px;padding:1px 5px;border-radius:4px}
+.check-btn{width:22px;height:22px;border-radius:50%;border:2px solid var(--gray-200);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:.15s;flex-shrink:0}
+.check-btn.done{background:var(--green);border-color:var(--green);color:#fff}
+.check-btn:hover{border-color:var(--teal)}
+
+/* ── Suggestions ── */
+.suggestion-bar{padding:12px 18px;border-top:1px solid var(--gray-200);background:var(--gray-50)}
+.suggestion-bar h4{font-size:12px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px}
+.suggestion-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sugg-chip{padding:4px 10px;border-radius:20px;background:#fff;border:1px solid var(--gray-200);font-size:12px;cursor:pointer;transition:.1s}
+.sugg-chip:hover{border-color:var(--teal);color:var(--teal)}
+.sugg-score{color:var(--gray-600);margin-left:3px}
+
+/* ── Schedule Builder ── */
+#schedule-panel{gap:0}
+.sched-sidebar{width:240px;flex-shrink:0;border-right:1px solid var(--gray-200);overflow-y:auto;padding:14px;background:var(--gray-50)}
+.sched-sidebar h3{font-size:14px;font-weight:600;margin-bottom:10px}
+.sched-sidebar label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.3px}
+.pref-group{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
+.pref-btn{padding:4px 10px;border:1px solid var(--gray-200);border-radius:20px;background:#fff;cursor:pointer;font-size:12px;transition:.1s}
+.pref-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.day-checks{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
+.day-check{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer}
+.day-check input{cursor:pointer}
+.course-picks{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.course-pick{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;cursor:pointer;transition:.1s}
+.course-pick.selected{background:#e8f4f8;border-color:var(--teal)}
+.course-pick input[type=checkbox]{cursor:pointer}
+.session-select{width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;margin-bottom:10px}
+.gen-btn{width:100%;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;transition:.15s}
+.gen-btn:hover{background:var(--blue-light)}
+
+/* ── Timetable grid ── */
+.grid-area{flex:1;overflow:auto;padding:14px}
+.grid-wrap{position:relative;min-width:600px}
+.grid-header{display:grid;grid-template-columns:50px repeat(5,1fr);margin-bottom:2px}
+.grid-day-label{text-align:center;font-size:12px;font-weight:600;color:var(--gray-600);padding:4px}
+.grid-body{display:grid;grid-template-columns:50px repeat(5,1fr);position:relative}
+.time-col{display:flex;flex-direction:column}
+.time-slot{height:30px;display:flex;align-items:flex-start;font-size:11px;color:var(--gray-600);padding-top:0;border-top:1px solid var(--gray-200);position:relative;top:-6px}
+.day-col{position:relative;border-left:1px solid var(--gray-100)}
+.day-col-bg{display:flex;flex-direction:column}
+.hour-block{height:60px;border-top:1px solid var(--gray-200)}
+.half-block{height:30px;border-top:1px dashed var(--gray-100)}
+.course-block{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;font-size:11px;overflow:hidden;cursor:default;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.course-block .cb-code{font-weight:700}
+.course-block .cb-room{opacity:.8;font-size:10px}
+.course-block.conflict{border:2px solid var(--red);opacity:.85}
+.no-data{color:var(--gray-600);font-size:13px;padding:20px;text-align:center}
+
+/* ── Prereq / Exclusion indicators ── */
+.prereq-met{color:var(--green);font-weight:600;font-size:12px}
+.prereq-warn{display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#856404;background:#fff3cd;border:1px solid #fcd34d;border-radius:4px;padding:1px 5px;cursor:default;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.prereq-none{color:var(--gray-600);font-size:12px}
+.excl-flag{display:inline-block;color:var(--red);font-size:12px;margin-left:4px;cursor:default}
+
+/* ── Misc ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--gray-600)}
+.empty-state p{margin-top:6px;font-size:13px}
+.notice{background:#fff3cd;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:12px;color:#856404;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>UTM Course Planner</h1>
+  <a href="/">← UofT Tools</a>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('planner')">Program Planner</button>
+  <button class="tab-btn" onclick="switchTab('schedule')">Schedule Builder</button>
+</div>
+
+<!-- ════════════════════════════════════ PROGRAM PLANNER ════════════════════════════════════ -->
+<div id="planner-panel" class="tab-panel active">
+  <aside class="sidebar">
+    <div class="sidebar-search">
+      <input id="section-search" type="text" placeholder="Search subjects…" oninput="filterSections(this.value)">
+    </div>
+    <div class="section-list" id="section-list"></div>
+  </aside>
+
+  <div class="main">
+    <div class="prog-header">
+      <h2>Selected Programs</h2>
+      <div class="prog-list" id="prog-chips"></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="prog-dropdown" id="prog-dropdown">
+          <button class="prog-dropdown-btn" onclick="toggleProgramDropdown()">+ Add program</button>
+          <div class="prog-popup" id="prog-popup"></div>
+        </div>
+        <div class="intention-row">
+          <label><input type="checkbox" id="show-intention-toggle" onchange="renderCourseTable()"> Show intention programs (dashed)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="course-area" id="course-area">
+      <div class="empty-state">
+        <div style="font-size:36px">📚</div>
+        <p>Select a subject from the left, then add a program to see course requirements.</p>
+      </div>
+    </div>
+
+    <div class="suggestion-bar" id="suggestion-bar" style="display:none">
+      <h4>Similar Programs You Might Like</h4>
+      <div class="suggestion-chips" id="suggestion-chips"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ SCHEDULE BUILDER ════════════════════════════════════ -->
+<div id="schedule-panel" class="tab-panel">
+  <aside class="sched-sidebar">
+    <h3>Build Schedule</h3>
+
+    <label>Session</label>
+    <select class="session-select" id="session-select" onchange="onSessionChange()">
+      <option value="">Loading sessions…</option>
+    </select>
+
+    <label>Courses to Schedule</label>
+    <div class="course-picks" id="course-picks">
+      <div style="font-size:12px;color:var(--gray-600)">Add programs in the Planner tab first.</div>
+    </div>
+
+    <label>Schedule Density</label>
+    <div class="pref-group" id="pref-density">
+      <button class="pref-btn active" data-val="compact" onclick="setPref('density',this)">Compact</button>
+      <button class="pref-btn" data-val="spread" onclick="setPref('density',this)">Spread out</button>
+    </div>
+
+    <label>Time of Day</label>
+    <div class="pref-group" id="pref-time">
+      <button class="pref-btn active" data-val="any" onclick="setPref('time',this)">Any</button>
+      <button class="pref-btn" data-val="morning" onclick="setPref('time',this)">Morning</button>
+      <button class="pref-btn" data-val="afternoon" onclick="setPref('time',this)">Afternoon</button>
+    </div>
+
+    <label>Free Days (no classes)</label>
+    <div class="day-checks" id="free-days">
+      <label class="day-check"><input type="checkbox" data-day="1"> Mon</label>
+      <label class="day-check"><input type="checkbox" data-day="2"> Tue</label>
+      <label class="day-check"><input type="checkbox" data-day="3"> Wed</label>
+      <label class="day-check"><input type="checkbox" data-day="4"> Thu</label>
+      <label class="day-check"><input type="checkbox" data-day="5"> Fri</label>
+    </div>
+
+    <label>Busy Days (prefer classes here)</label>
+    <div class="day-checks" id="busy-days">
+      <label class="day-check"><input type="checkbox" data-day="1"> Mon</label>
+      <label class="day-check"><input type="checkbox" data-day="2"> Tue</label>
+      <label class="day-check"><input type="checkbox" data-day="3"> Wed</label>
+      <label class="day-check"><input type="checkbox" data-day="4"> Thu</label>
+      <label class="day-check"><input type="checkbox" data-day="5"> Fri</label>
+    </div>
+
+    <button class="gen-btn" onclick="generateSchedule()">Generate Schedule</button>
+    <div id="sched-notice" style="margin-top:8px;font-size:12px;color:var(--gray-600)"></div>
+  </aside>
+
+  <div class="grid-area">
+    <div class="grid-wrap" id="grid-wrap">
+      <div class="no-data">Select a session and courses, then click Generate Schedule.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════ STATE ═══════════════════════════════
+const BASE = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+  ? ''
+  : '';
+
+const state = {
+  programs:  null,   // utm-programs.json payload
+  courses:   null,   // utm-courses.json payload — keyed by course code
+  sessions:  [],     // utm-sessions.json payload
+  timetable: null,   // current utm-timetable-{session}.json payload
+  timetableSession: null,
+
+  activeSectionSlug: null,
+  selectedPrograms:  [],  // [{id,name,type,courses,intention}]
+  completedCourses:  new Set(JSON.parse(localStorage.getItem('utm_completed') || '[]')),
+
+  prefs: {density:'compact', time:'any', freeDays:new Set(), busyDays:new Set()},
+  scheduledCourses: [],  // course codes picked in schedule tab
+  scheduleResult:  [],   // [{code,name,section,times,color,conflict}]
+};
+
+// ═══════════════════════════════ INIT ═══════════════════════════════
+const PALETTE = ['#2563eb','#7c3aed','#db2777','#ea580c','#16a34a','#0891b2','#4f46e5','#b45309'];
+
+async function init() {
+  const [progs, sess] = await Promise.all([
+    fetch(BASE + '/planner/data/utm-programs.json').then(r => r.json()),
+    fetch(BASE + '/planner/data/utm-sessions.json').then(r => r.json()),
+  ]);
+  state.programs = progs;
+  state.sessions = sess;
+  renderSectionList();
+  populateSessionSelect();
+  document.addEventListener('click', handleGlobalClick);
+  // Load course prereq/exclusion data in the background — non-blocking
+  fetch(BASE + '/planner/data/utm-courses.json')
+    .then(r => r.ok ? r.json() : null)
+    .then(data => { if (data) { state.courses = data; renderCourseTable(); } })
+    .catch(() => {});
+}
+
+// ═══════════════════════════════ TABS ═══════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', (tab==='planner'?0:1)===i));
+  document.getElementById('planner-panel').classList.toggle('active', tab==='planner');
+  document.getElementById('schedule-panel').classList.toggle('active', tab==='schedule');
+  if (tab === 'schedule') refreshCoursePicks();
+}
+
+// ═══════════════════════════════ SECTION LIST ═══════════════════════
+function renderSectionList(filter='') {
+  const list = document.getElementById('section-list');
+  if (!state.programs) return;
+  const sections = state.programs.sections.filter(s =>
+    !filter || s.name.toLowerCase().includes(filter.toLowerCase()) || s.slug.toLowerCase().includes(filter.toLowerCase())
+  );
+  list.innerHTML = sections.map(s => `
+    <button class="section-item ${s.slug===state.activeSectionSlug?'active':''}"
+            onclick="selectSection('${s.slug}')">${s.name || s.slug.replace(/-/g,' ')}</button>
+  `).join('');
+}
+
+function filterSections(v) { renderSectionList(v); }
+
+function selectSection(slug) {
+  state.activeSectionSlug = slug;
+  renderSectionList(document.getElementById('section-search').value);
+  renderProgramPopup();
+}
+
+// ═══════════════════════════════ PROGRAM DROPDOWN ═══════════════════
+function toggleProgramDropdown() {
+  const popup = document.getElementById('prog-popup');
+  popup.classList.toggle('open');
+  if (popup.classList.contains('open')) renderProgramPopup();
+}
+
+function handleGlobalClick(e) {
+  const dd = document.getElementById('prog-dropdown');
+  if (!dd.contains(e.target)) document.getElementById('prog-popup').classList.remove('open');
+}
+
+function renderProgramPopup() {
+  const popup = document.getElementById('prog-popup');
+  if (!state.activeSectionSlug || !state.programs) {
+    popup.innerHTML = '<div style="padding:10px;color:var(--gray-600);font-size:12px">Select a subject first.</div>';
+    return;
+  }
+  const sec = state.programs.sections.find(s => s.slug === state.activeSectionSlug);
+  if (!sec || !sec.programs.length) {
+    popup.innerHTML = '<div style="padding:10px;color:var(--gray-600);font-size:12px">No programs found.</div>';
+    return;
+  }
+  popup.innerHTML = sec.programs.map(p => {
+    const sel = state.selectedPrograms.find(s => s.id === p.id);
+    const badge = badgeClass(p.type);
+    return `<div class="prog-popup-item ${sel?'selected':''}" onclick="toggleProgram('${p.id}')">
+      <span>${p.name.split(' - ')[0] || p.name}</span>
+      <span class="badge ${badge}">${p.type}</span>
+    </div>`;
+  }).join('');
+}
+
+function badgeClass(type) {
+  if (!type) return '';
+  const t = type.toLowerCase();
+  if (t.includes('major')) return 'badge-major';
+  if (t.includes('minor')) return 'badge-minor';
+  if (t.includes('specialist')) return 'badge-specialist';
+  return '';
+}
+
+function toggleProgram(id) {
+  const existing = state.selectedPrograms.findIndex(p => p.id === id);
+  if (existing >= 0) {
+    state.selectedPrograms.splice(existing, 1);
+  } else {
+    const prog = findProgramById(id);
+    if (prog) state.selectedPrograms.push({...prog, intention: false});
+  }
+  renderProgramPopup();
+  renderChips();
+  renderCourseTable();
+  renderSuggestions();
+  refreshCoursePicks();
+}
+
+function findProgramById(id) {
+  for (const sec of state.programs.sections) {
+    const p = sec.programs.find(p => p.id === id);
+    if (p) return p;
+  }
+  return null;
+}
+
+// ═══════════════════════════════ CHIPS ═══════════════════════════════
+function renderChips() {
+  const container = document.getElementById('prog-chips');
+  if (!state.selectedPrograms.length) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--gray-600)">No programs selected</span>';
+    return;
+  }
+  container.innerHTML = state.selectedPrograms.map(p => {
+    const cls = (p.type||'').toLowerCase().includes('major') ? 'major'
+              : (p.type||'').toLowerCase().includes('minor') ? 'minor'
+              : (p.type||'').toLowerCase().includes('specialist') ? 'specialist' : 'major';
+    const shortName = p.name.split(' - ')[0] || p.name;
+    return `<div class="prog-chip ${cls} ${p.intention?'intention':''}"
+                 title="${p.intention?'Intention (planning)':p.type}">
+      <span onclick="toggleIntention('${p.id}')" title="Toggle intention">${shortName}</span>
+      <span class="chip-x" onclick="toggleProgram('${p.id}')">×</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleIntention(id) {
+  const p = state.selectedPrograms.find(p => p.id === id);
+  if (p) { p.intention = !p.intention; renderChips(); renderCourseTable(); }
+}
+
+// ═══════════════════════════════ COURSE TABLE ════════════════════════
+function buildCourseList() {
+  const showIntention = document.getElementById('show-intention-toggle').checked;
+  const courseMap = new Map(); // code → {code, programs:[{name,type,intention}]}
+  for (const prog of state.selectedPrograms) {
+    if (prog.intention && !showIntention) continue;
+    for (const code of (prog.courses || [])) {
+      if (!courseMap.has(code)) courseMap.set(code, {code, programs:[]});
+      courseMap.get(code).programs.push({name: prog.name.split(' - ')[0], type: prog.type, intention: prog.intention});
+    }
+  }
+  return [...courseMap.values()].sort((a,b) => a.code.localeCompare(b.code));
+}
+
+function renderCourseTable() {
+  const area = document.getElementById('course-area');
+  const courses = buildCourseList();
+
+  if (!state.selectedPrograms.length) {
+    area.innerHTML = '<div class="empty-state"><div style="font-size:36px">📚</div><p>Select a subject from the left, then add a program.</p></div>';
+    return;
+  }
+  if (!courses.length) {
+    area.innerHTML = '<div class="empty-state"><p>No course data found for selected programs.</p></div>';
+    return;
+  }
+
+  const done   = courses.filter(c => state.completedCourses.has(c.code)).length;
+  const pending = courses.length - done;
+
+  // Build set of all course codes across selected programs for exclusion checking
+  const allSelectedCodes = new Set(courses.map(c => c.code));
+
+  area.innerHTML = `
+    <div class="course-stats">
+      <span class="stat stat-total">📋 ${courses.length} total</span>
+      <span class="stat stat-pending">⏳ ${pending} pending</span>
+      <span class="stat stat-done">✓ ${done} completed</span>
+    </div>
+    <table class="course-table">
+      <thead><tr>
+        <th style="width:28px"></th>
+        <th>Course</th>
+        <th>Required by</th>
+        <th>${state.courses ? 'Prereqs' : 'Year'}</th>
+        ${state.courses ? '<th>Year</th>' : ''}
+      </tr></thead>
+      <tbody>
+        ${courses.map(c => {
+          const isDone = state.completedCourses.has(c.code);
+          const year = courseYear(c.code);
+          const meta = state.courses ? state.courses[c.code] : null;
+
+          // Exclusion conflict: any of this course's exclusions is also in our selected list
+          const exclConflicts = meta ? (meta.exclusions || []).filter(ex => allSelectedCodes.has(ex)) : [];
+
+          // Prereq status
+          let prereqCell = '';
+          if (meta) {
+            const prereqs = meta.prereqs || [];
+            if (!prereqs.length) {
+              prereqCell = '<span class="prereq-none">—</span>';
+            } else {
+              const unmet = prereqs.filter(p => !state.completedCourses.has(p));
+              if (!unmet.length) {
+                prereqCell = '<span class="prereq-met">✓ met</span>';
+              } else {
+                const tip = 'Missing: ' + unmet.join(', ');
+                prereqCell = `<span class="prereq-warn" title="${tip}">⚠ ${unmet.slice(0,2).join(', ')}${unmet.length>2?' +':''}${unmet.length>2?unmet.length-2+' more':''}</span>`;
+              }
+            }
+          }
+
+          const exclBadge = exclConflicts.length
+            ? `<span class="excl-flag" title="Exclusion conflict with: ${exclConflicts.join(', ')}">⊘</span>`
+            : '';
+
+          return `<tr class="${isDone?'done':''}">
+            <td><button class="check-btn ${isDone?'done':''}" onclick="toggleCompleted('${c.code}')">${isDone?'✓':''}</button></td>
+            <td><span class="course-code">${c.code}</span>${exclBadge}</td>
+            <td><div class="programs-tags">${c.programs.map(p =>
+              `<span class="ptag ${badgeClass(p.type)}">${p.name}</span>`
+            ).join('')}</div></td>
+            <td>${prereqCell || (year ? '<span style="color:var(--gray-600);font-size:12px">Y'+year+'</span>' : '<span style="color:var(--gray-600)">—</span>')}</td>
+            ${state.courses ? `<td style="color:var(--gray-600);font-size:12px">${year ? 'Y'+year : '—'}</td>` : ''}
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+function courseYear(code) {
+  const m = code.match(/\d{3}/);
+  if (!m) return null;
+  return Math.floor(parseInt(m[0]) / 100);
+}
+
+function toggleCompleted(code) {
+  if (state.completedCourses.has(code)) state.completedCourses.delete(code);
+  else state.completedCourses.add(code);
+  localStorage.setItem('utm_completed', JSON.stringify([...state.completedCourses]));
+  renderCourseTable();
+  refreshCoursePicks();
+}
+
+// ═══════════════════════════════ SUGGESTIONS ════════════════════════
+function renderSuggestions() {
+  const bar   = document.getElementById('suggestion-bar');
+  const chips = document.getElementById('suggestion-chips');
+  if (!state.selectedPrograms.length || !state.programs) { bar.style.display='none'; return; }
+
+  const selectedIds = new Set(state.selectedPrograms.map(p => p.id));
+  const mySet = new Set(state.selectedPrograms.flatMap(p => p.courses || []));
+
+  const scores = [];
+  for (const sec of state.programs.sections) {
+    for (const p of sec.programs) {
+      if (selectedIds.has(p.id)) continue;
+      const pSet = new Set(p.courses || []);
+      const inter = [...mySet].filter(c => pSet.has(c)).length;
+      const union  = new Set([...mySet, ...pSet]).size;
+      if (inter < 2 || !union) continue;
+      const jaccard = inter / union;
+      scores.push({id:p.id, name:p.name.split(' - ')[0], type:p.type, shared:inter, jaccard});
+    }
+  }
+  scores.sort((a,b) => b.shared - a.shared);
+  const top = scores.slice(0, 8);
+
+  if (!top.length) { bar.style.display='none'; return; }
+  bar.style.display='block';
+  chips.innerHTML = top.map(s =>
+    `<span class="sugg-chip" onclick="addSuggested('${s.id}')" title="Add ${s.name}">
+      ${s.name} <span class="badge ${badgeClass(s.type)}" style="margin-left:3px">${s.type}</span>
+      <span class="sugg-score">(${s.shared} shared)</span>
+    </span>`
+  ).join('');
+}
+
+function addSuggested(id) {
+  const prog = findProgramById(id);
+  if (prog && !state.selectedPrograms.find(p => p.id === id)) {
+    state.selectedPrograms.push({...prog, intention: false});
+    renderChips(); renderCourseTable(); renderSuggestions(); refreshCoursePicks();
+  }
+}
+
+// ═══════════════════════════════ SCHEDULE BUILDER ═══════════════════
+function populateSessionSelect() {
+  const sel = document.getElementById('session-select');
+  const available = state.sessions.filter(s => s.value && s.value !== '');
+  if (!available.length) { sel.innerHTML = '<option>No sessions available</option>'; return; }
+  sel.innerHTML = available.map(s =>
+    `<option value="${s.value}">${s.label}</option>`
+  ).join('');
+}
+
+function onSessionChange() {
+  state.timetable = null;
+  state.timetableSession = null;
+}
+
+async function loadTimetable(session) {
+  if (state.timetableSession === session && state.timetable) return state.timetable;
+  const data = await fetch(BASE + `/planner/data/utm-timetable-${session}.json`).then(r => r.json());
+  state.timetable = data;
+  state.timetableSession = session;
+  return data;
+}
+
+function refreshCoursePicks() {
+  const container = document.getElementById('course-picks');
+  const pending = buildCourseList().filter(c => !state.completedCourses.has(c.code));
+  if (!pending.length) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--gray-600)">No pending courses. Add programs in the Planner tab.</div>';
+    state.scheduledCourses = [];
+    return;
+  }
+  // Remove deselected courses from scheduledCourses
+  state.scheduledCourses = state.scheduledCourses.filter(c => pending.find(p => p.code === c));
+
+  container.innerHTML = pending.map(c =>
+    `<label class="course-pick ${state.scheduledCourses.includes(c.code)?'selected':''}">
+      <input type="checkbox" ${state.scheduledCourses.includes(c.code)?'checked':''}
+             onchange="toggleScheduledCourse('${c.code}',this.checked)">
+      <span class="course-code" style="font-size:12px">${c.code}</span>
+    </label>`
+  ).join('');
+}
+
+function toggleScheduledCourse(code, checked) {
+  if (checked) { if (!state.scheduledCourses.includes(code)) state.scheduledCourses.push(code); }
+  else state.scheduledCourses = state.scheduledCourses.filter(c => c !== code);
+  refreshCoursePicks();
+}
+
+function setPref(key, btn) {
+  state.prefs[key] = btn.dataset.val;
+  btn.closest('.pref-group').querySelectorAll('.pref-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function getFreeDays()  { return [...document.querySelectorAll('#free-days input:checked')].map(i => +i.dataset.day); }
+function getBusyDays()  { return [...document.querySelectorAll('#busy-days input:checked')].map(i => +i.dataset.day); }
+
+// ═══════════════════════════════ SCHEDULING ══════════════════════════
+const COLORS = ['#2563eb','#7c3aed','#db2777','#ea580c','#16a34a','#0891b2','#4f46e5','#b45309','#be123c','#0369a1'];
+
+async function generateSchedule() {
+  const session = document.getElementById('session-select').value;
+  const notice  = document.getElementById('sched-notice');
+  if (!session) { notice.textContent = 'Please select a session.'; return; }
+  if (!state.scheduledCourses.length) { notice.textContent = 'Select at least one course to schedule.'; return; }
+
+  notice.textContent = 'Loading timetable…';
+  const tt = await loadTimetable(session);
+
+  if (!tt.courseCount) {
+    notice.textContent = 'Timetable not yet published for this session.';
+    renderGrid([]);
+    return;
+  }
+
+  const freeDays = getFreeDays();
+  const busyDays = getBusyDays();
+  const {density, time} = state.prefs;
+
+  // Build lookup: code → [{sectionType, times[]}]
+  const lookup = new Map();
+  for (const c of tt.courses) {
+    if (!lookup.has(c.code)) lookup.set(c.code, c);
+  }
+
+  const results = [];
+  const placed  = []; // times already placed [{day,startMs,endMs}]
+  const colorMap = {};
+  let colorIdx = 0;
+
+  for (const code of state.scheduledCourses) {
+    if (!colorMap[code]) colorMap[code] = COLORS[colorIdx++ % COLORS.length];
+    const entry = lookup.get(code);
+    if (!entry) {
+      results.push({code, name:'Not in timetable', sections:[], times:[], color:colorMap[code], missing:true});
+      continue;
+    }
+
+    // Separate LEC and TUT/PRA
+    const lectures = entry.sections.filter(s => s.type === 'LEC' || s.type === 'ASYNC');
+    const tutorials = entry.sections.filter(s => s.type === 'TUT' || s.type === 'PRA');
+
+    const pickedSections = [];
+    for (const pool of [lectures, tutorials]) {
+      if (!pool.length) continue;
+      const scored = pool.map(sec => ({sec, score: scoreSec(sec, freeDays, busyDays, density, time, placed)}));
+      scored.sort((a,b) => b.score - a.score);
+      const best = scored[0].sec;
+      pickedSections.push(best);
+      for (const t of best.times) if (t.day) placed.push({code, day:t.day, startMs:t.startMs, endMs:t.endMs});
+    }
+
+    results.push({code, name:entry.name, sections:pickedSections, color:colorMap[code], conflict:false});
+  }
+
+  // Detect conflicts
+  markConflicts(results);
+
+  state.scheduleResult = results;
+  renderGrid(results);
+
+  const missing  = results.filter(r => r.missing).length;
+  const conflicts = results.filter(r => r.conflict).length;
+  notice.textContent = missing ? `⚠ ${missing} course(s) not found in this session's timetable.`
+    : conflicts ? `⚠ ${conflicts} time conflict(s) detected.`
+    : `✓ Schedule generated for ${results.length} course(s).`;
+}
+
+function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
+  let score = 50;
+  for (const t of sec.times) {
+    if (!t.day) continue;
+    // Penalise free days
+    if (freeDays.includes(t.day)) score -= 100;
+    // Reward busy days
+    if (busyDays.includes(t.day)) score += 20;
+    // Time preference
+    const hr = t.startMs / 3600000;
+    if (timePref === 'morning'   && hr >= 12) score -= 15;
+    if (timePref === 'afternoon' && hr < 12)  score -= 15;
+    // Density: compact → reward same days as already placed
+    if (density === 'compact') {
+      const sameDayPlaced = placed.filter(p => p.day === t.day).length;
+      score += sameDayPlaced * 5;
+    }
+    // Penalise overlap
+    for (const p of placed) {
+      if (p.day === t.day && t.startMs < p.endMs && t.endMs > p.startMs) score -= 50;
+    }
+  }
+  return score;
+}
+
+function markConflicts(results) {
+  const allTimes = [];
+  for (const r of results) {
+    for (const sec of (r.sections||[])) {
+      for (const t of sec.times) {
+        if (!t.day) continue;
+        allTimes.push({result:r, day:t.day, startMs:t.startMs, endMs:t.endMs});
+      }
+    }
+  }
+  for (let i=0; i<allTimes.length; i++) {
+    for (let j=i+1; j<allTimes.length; j++) {
+      const a=allTimes[i], b=allTimes[j];
+      if (a.result===b.result) continue;
+      if (a.day===b.day && a.startMs<b.endMs && a.endMs>b.startMs) {
+        a.result.conflict = true; b.result.conflict = true;
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════ GRID RENDERER ═══════════════════════
+const DAY_LABELS = ['','Mon','Tue','Wed','Thu','Fri'];
+const GRID_START = 8 * 3600000;   // 8:00 AM in ms
+const GRID_END   = 21 * 3600000;  // 9:00 PM in ms
+const HOUR_PX    = 60;            // px per hour
+
+function msToTop(ms)    { return (ms - GRID_START) / 3600000 * HOUR_PX; }
+function msToPx(ms)     { return ms / 3600000 * HOUR_PX; }
+function msToLabel(ms)  {
+  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000);
+  const ampm = h < 12 ? 'AM' : 'PM';
+  return `${h>12?h-12:h||12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function renderGrid(results) {
+  const wrap = document.getElementById('grid-wrap');
+  if (!results.length) {
+    wrap.innerHTML = '<div class="no-data">No courses scheduled yet.</div>';
+    return;
+  }
+
+  const totalH = (GRID_END - GRID_START) / 3600000;
+  const hours  = Array.from({length: totalH}, (_,i) => GRID_START + i * 3600000);
+
+  // Build per-day blocks
+  const dayBlocks = {1:[],2:[],3:[],4:[],5:[]};
+  for (const r of results) {
+    for (const sec of (r.sections || [])) {
+      for (const t of sec.times) {
+        if (!t.day || t.day < 1 || t.day > 5) continue;
+        const top    = msToTop(Math.max(t.startMs, GRID_START));
+        const height = msToPx(Math.min(t.endMs, GRID_END) - Math.max(t.startMs, GRID_START));
+        if (height <= 0) continue;
+        dayBlocks[t.day].push({
+          code:r.code, name:r.name, sec:sec.name, room:t.room,
+          top, height, color:r.color, conflict:r.conflict,
+          startLabel: msToLabel(t.startMs), endLabel: msToLabel(t.endMs),
+        });
+      }
+    }
+  }
+
+  const colHeight = totalH * HOUR_PX;
+
+  wrap.innerHTML = `
+    <div class="grid-header">
+      <div></div>
+      ${[1,2,3,4,5].map(d=>`<div class="grid-day-label">${DAY_LABELS[d]}</div>`).join('')}
+    </div>
+    <div class="grid-body">
+      <div class="time-col" style="height:${colHeight}px">
+        ${hours.map(h=>`<div class="time-slot" style="height:${HOUR_PX}px">${msToLabel(h)}</div>`).join('')}
+      </div>
+      ${[1,2,3,4,5].map(d => `
+        <div class="day-col" style="height:${colHeight}px">
+          <div class="day-col-bg">
+            ${hours.map(_=>`<div class="hour-block"><div class="half-block"></div></div>`).join('')}
+          </div>
+          ${(dayBlocks[d]||[]).map(b => `
+            <div class="course-block ${b.conflict?'conflict':''}"
+                 style="top:${b.top}px;height:${b.height}px;background:${b.color};color:#fff"
+                 title="${b.code} ${b.sec}\n${b.startLabel}–${b.endLabel}\n${b.room}">
+              <div class="cb-code">${b.code}</div>
+              <div class="cb-room">${b.sec} ${b.room}</div>
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+init();
+</script>
+</body>
+</html>
