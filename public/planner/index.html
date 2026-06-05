@@ -30,14 +30,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .tab-panel.active{display:flex;height:calc(100vh - 94px)}
 
 /* ── Sidebar ── */
-.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;background:var(--gray-50)}
+.sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--gray-200);display:flex;flex-direction:column;background:var(--gray-50);position:relative}
 .sidebar-search{padding:10px;border-bottom:1px solid var(--gray-200)}
 .sidebar-search input{width:100%;padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none}
 .sidebar-search input:focus{border-color:var(--teal)}
 .section-list{overflow-y:auto;flex:1}
-.section-item{display:block;width:100%;text-align:left;padding:7px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--gray-800);border-left:3px solid transparent;transition:.1s}
+.section-item{display:block;width:100%;text-align:left;padding:7px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--gray-800);border-left:3px solid transparent;transition:.1s;position:relative}
 .section-item:hover{background:var(--gray-100)}
 .section-item.active{background:#e8f4f8;border-left-color:var(--teal);color:var(--blue);font-weight:500}
+.section-item .s-hint{font-size:9px;color:var(--gray-600);float:right;opacity:.5}
 
 /* ── Main content ── */
 .main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
@@ -55,19 +56,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .prog-chip .chip-x:hover{opacity:.7}
 
 .prog-dropdown{position:relative}
-.prog-dropdown-btn{padding:5px 12px;border:1px dashed var(--gray-200);border-radius:20px;background:#fff;cursor:pointer;font-size:12px;color:var(--gray-600)}
-.prog-dropdown-btn:hover{border-color:var(--teal);color:var(--teal)}
-.prog-popup{position:absolute;top:calc(100% + 4px);left:0;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:var(--shadow);z-index:100;width:300px;max-height:260px;overflow-y:auto;display:none}
-.prog-popup.open{display:block}
-.prog-popup-item{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;cursor:pointer;font-size:13px}
+.sidebar-popup{display:none;position:absolute;top:0;left:100%;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:101;width:320px;max-height:400px;overflow-y:auto;margin-left:4px}
+.sidebar-popup.open{display:block}
+.prog-popup-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:13px}
 .prog-popup-item:hover{background:var(--gray-50)}
+.prog-popup-item.selected{background:#f0f9ff}
+.prog-popup-item.selected::after{content:'✓';color:var(--teal);font-weight:600;font-size:13px}
 .prog-popup-item .badge{font-size:11px;padding:2px 6px;border-radius:10px;font-weight:500}
 .badge-major{background:#dbeafe;color:#1e40af}
 .badge-minor{background:#dcfce7;color:#166534}
 .badge-specialist{background:#fef3c7;color:#92400e}
-.prog-popup-item.selected{background:#f0f9ff}
-.intention-row{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:var(--gray-600)}
-.intention-row label{cursor:pointer;display:flex;align-items:center;gap:4px}
+.prog-popup-header{font-size:12px;font-weight:600;padding:8px 12px;color:var(--blue);border-bottom:1px solid var(--gray-100)}
+.prog-popup-empty{padding:10px 12px;font-size:12px;color:var(--gray-600)}
 
 /* ── Course table ── */
 .course-area{flex:1;padding:14px 18px;overflow-y:auto}
@@ -220,23 +220,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
       <input id="section-search" type="text" placeholder="Search subjects…" oninput="filterSections(this.value)">
     </div>
     <div class="section-list" id="section-list"></div>
+    <div class="sidebar-popup" id="sidebar-popup"></div>
   </aside>
 
   <div class="main">
     <div class="prog-header">
-      <h2>Selected Programs</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h2>Selected Programs</h2>
+        <div style="font-size:11px;color:var(--gray-600)">Click a subject → add program</div>
+      </div>
       <div class="prog-list" id="prog-chips"></div>
       <div id="prog-legality" style="font-size:12px;margin-bottom:6px"></div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <div class="prog-dropdown" id="prog-dropdown">
-          <button class="prog-dropdown-btn" onclick="toggleProgramDropdown()">+ Add program</button>
-          <div class="prog-popup" id="prog-popup"></div>
-        </div>
-        <div class="intention-row">
-          <label><input type="checkbox" id="show-intention-toggle" onchange="renderCourseArea()"> Show intention programs (dashed)</label>
-        </div>
-      </div>
-      <div class="data-btns">
+      <div class="data-btns" style="margin-top:4px">
         <button class="data-btn" onclick="exportData()">⬇ Export</button>
         <button class="data-btn" onclick="importData()">⬆ Import</button>
       </div>
@@ -386,41 +381,50 @@ function filterSections(v) { renderSectionList(v); }
 function selectSection(slug) {
   state.activeSectionSlug = slug;
   renderSectionList(document.getElementById('section-search').value);
-  renderProgramPopup();
+  openSidebarPopup();
+  renderSidebarPopup();
 }
 
-// ═══════════════════════════════ PROGRAM DROPDOWN ═══════════════════
-function toggleProgramDropdown() {
-  const popup = document.getElementById('prog-popup');
-  popup.classList.toggle('open');
-  if (popup.classList.contains('open')) renderProgramPopup();
+// SIDEBAR POPUP
+function openSidebarPopup() {
+  document.getElementById('sidebar-popup').classList.add('open');
 }
 
-function handleGlobalClick(e) {
-  const dd = document.getElementById('prog-dropdown');
-  if (!dd.contains(e.target)) document.getElementById('prog-popup').classList.remove('open');
+function closeSidebarPopup() {
+  document.getElementById('sidebar-popup').classList.remove('open');
 }
 
-function renderProgramPopup() {
-  const popup = document.getElementById('prog-popup');
+function renderSidebarPopup() {
+  const popup = document.getElementById('sidebar-popup');
   if (!state.activeSectionSlug || !state.programs) {
-    popup.innerHTML = '<div style="padding:10px;color:var(--gray-600);font-size:12px">Select a subject first.</div>';
+    popup.innerHTML = '<div class="prog-popup-empty">Select a subject first.</div>';
     return;
   }
   const sec = state.programs.sections.find(s => s.slug === state.activeSectionSlug);
   if (!sec || !sec.programs.length) {
-    popup.innerHTML = '<div style="padding:10px;color:var(--gray-600);font-size:12px">No programs found.</div>';
+    popup.innerHTML = '<div class="prog-popup-empty">No programs found.</div>';
     return;
   }
-  popup.innerHTML = sec.programs.map(p => {
-    const sel = state.selectedPrograms.find(s => s.id === p.id);
-    const badge = badgeClass(p.type);
-    return `<div class="prog-popup-item ${sel?'selected':''}" onclick="toggleProgram('${p.id}')">
-      <span>${p.name} <span style="font-size:11px;color:var(--gray-600)">${p.code||''}</span></span>
-      <span class="badge ${badge}">${p.type}</span>
-    </div>`;
-  }).join('');
+  const selectedIds = new Set(state.selectedPrograms.map(p => p.id));
+  popup.innerHTML = '<div class="prog-popup-header">' + sec.name + '</div>'
+    + sec.programs.map(p => {
+      const sel = selectedIds.has(p.id);
+      const badge = badgeClass(p.type);
+      return `<div class="prog-popup-item ${sel?'selected':''}" onclick="toggleProgram('${p.id}')">
+        <span>${p.name} <span style="font-size:11px;color:var(--gray-600)">${p.code||''}</span></span>
+        <span class="badge ${badge}">${p.type}</span>
+      </div>`;
+    }).join('');
 }
+
+function handleGlobalClick(e) {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar.contains(e.target)) closeSidebarPopup();
+}
+
+// Legacy
+function toggleProgramDropdown() { openSidebarPopup(); renderSidebarPopup(); }
+function renderProgramPopup() { renderSidebarPopup(); }
 
 function badgeClass(type) {
   if (!type) return '';
@@ -439,7 +443,7 @@ function toggleProgram(id) {
     const prog = findProgramById(id);
     if (prog) state.selectedPrograms.push({...prog, intention: false});
   }
-  renderProgramPopup();
+  renderSidebarPopup();
   renderChips();
   renderCourseArea();
   renderSuggestions();
@@ -488,74 +492,88 @@ function renderLegality() {
   if (!active.length) { el.innerHTML = ''; return; }
 
   const messages = [];
+  const s = active.filter(p => (p.type||'').toLowerCase().includes('specialist'));
+  const m = active.filter(p => (p.type||'').toLowerCase().includes('major'));
+  const mi = active.filter(p => (p.type||'').toLowerCase().includes('minor'));
 
-  // Count types
-  const specialists = active.filter(p => (p.type||'').toLowerCase().includes('specialist'));
-  const majors = active.filter(p => (p.type||'').toLowerCase().includes('major'));
-  const minors = active.filter(p => (p.type||'').toLowerCase().includes('minor'));
+  // Rule: at most 3 programs total
+  if (active.length > 3) {
+    messages.push(`⚠ ${active.length} active programs — UTM allows at most 3.`);
+  }
+
+  // Rule: need at least 1 specialist OR 1 major to graduate
+  if (!s.length && !m.length) {
+    messages.push('⚠ Minors alone won't satisfy a degree — add a specialist or major.');
+  }
 
   // Rule: at most 1 specialist
-  if (specialists.length > 1) {
-    messages.push(`⚠ ${specialists.length} specialists selected — UTM normally allows only 1.`);
+  if (s.length > 1) {
+    messages.push(`⚠ ${s.length} specialists — UTM normally allows only 1.`);
+  }
+
+  // Rule: ≥3 minors is unusual unless balanced
+  if (mi.length >= 3) {
+    messages.push(`⚠ ${mi.length} minors — check if this exceeds maximum.`);
   }
 
   // Rule: specialist + major in the same subject area is usually redundant
-  const subjectAreas = new Map(); // area → {specialist,major,minor}
+  const areas = new Map();
   for (const p of active) {
     const area = p.name.split(' - ')[0] || p.name;
-    if (!subjectAreas.has(area)) subjectAreas.set(area, new Set());
-    subjectAreas.get(area).add((p.type||'').toLowerCase());
+    if (!areas.has(area)) areas.set(area, new Set());
+    areas.get(area).add((p.type||'').toLowerCase());
   }
-  for (const [area, types] of subjectAreas) {
-    const spec = [...types].some(t => t.includes('specialist'));
-    const maj  = [...types].some(t => t.includes('major'));
-    if (spec && maj) {
-      messages.push(`⚠ "${area}" has both specialist and major — typically you'd pick one or the other.`);
+  for (const [area, types] of areas) {
+    const hasSpec = [...types].some(t => t.includes('specialist'));
+    const hasMaj  = [...types].some(t => t.includes('major'));
+    if (hasSpec && hasMaj) {
+      messages.push(`⚠ "${area}" has both specialist and major — pick one.`);
     }
   }
 
   if (!messages.length) {
-    // Check typical combo: 1 specialist OR 2 majors OR 1 major + 2 minors
-    const typeCount = {};
-    for (const p of active) {
-      const t = (p.type||'').toLowerCase();
-      typeCount[t] = (typeCount[t]||0) + 1;
-    }
-    let verdict = '';
-    const nSpec = typeCount['specialist']||0, nMaj = typeCount['major']||0, nMin = typeCount['minor']||0;
-    // Only show positive confirmation if it looks intentional
-    if (nSpec === 1 && nMaj === 0 && nMin <= 2) {
-      verdict = '1 specialist ' + (nMin ? `+ ${nMin} minor(s)` : '') + ' — standard UTM pattern';
-    } else if (nSpec === 0 && nMaj <= 2 && nMin <= 2) {
-      verdict = (nMaj ? `${nMaj} major(s)` : '') + (nMaj&&nMin?' + ':'') + (nMin ? `${nMin} minor(s)` : '') + ' — looks fine';
-    } else if (nSpec === 0 && nMaj === 0 && nMin <= 3) {
-      verdict = `${nMin} minor(s) — ok`;
-    }
-    if (verdict) {
-      el.innerHTML = `<span style="color:var(--green)">✓ ${verdict}</span>`;
-      return;
-    }
+    const nS=s.length, nM=m.length, nMi=mi.length;
+    let v = '';
+    if (nS===1 && nM===0 && nMi<=2) v = `1 specialist${nMi?' + '+nMi+' minor(s)':''} ✓`;
+    else if (nS===0 && nM===1 && nMi<=2) v = `1 major${nMi?' + '+nMi+' minor(s)':''} ✓`;
+    else if (nS===0 && nM===2 && nMi<=1) v = `2 majors${nMi?' + '+nMi+' minor(s)':''} ✓`;
+    else v = '';
+    if (v) { el.innerHTML = `<span style="color:var(--green)">✓ ${v}</span>`; return; }
     el.innerHTML = '';
     return;
   }
-
   el.innerHTML = messages.map(m => `<span style="color:#856404">${m}</span><br>`).join('');
 }
 
 // ═══════════════════════════════ COURSE TABLE ════════════════════════
 function buildCourseList() {
-  const showIntention = document.getElementById('show-intention-toggle').checked;
-  const courseMap = new Map(); // code → {code, programs:[{name,type,intention}]}
+  const courseMap = new Map();
   for (const prog of state.selectedPrograms) {
-    if (prog.intention && !showIntention) continue;
     for (const code of (prog.courses || [])) {
-      if (!courseMap.has(code)) courseMap.set(code, {code, programs:[]});
-      courseMap.get(code).programs.push({name: prog.name.split(' - ')[0], type: prog.type, intention: prog.intention});
+      if (!courseMap.has(code)) courseMap.set(code, {code, programs:[], reqLabels: new Set()});
+      const entry = courseMap.get(code);
+      entry.programs.push({name: prog.name.split(' - ')[0], type: prog.type, intention: prog.intention});
+    }
+    // Add requirement group labels for this program
+    const rg = prog.requirementGroups;
+    if (rg) {
+      for (const kind of ['completion','enrolment']) {
+        for (const sec of (rg[kind]?.sections || [])) {
+          for (const groups of sec.groups) {
+            for (const alt of groups) {
+              for (const code of alt) {
+                if (courseMap.has(code)) {
+                  courseMap.get(code).reqLabels.add(prog.name.split(' - ')[0] + ' · ' + (sec.label || kind));
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
   return [...courseMap.values()].sort((a,b) => a.code.localeCompare(b.code));
 }
-
 function renderCourseTable() {
   const area = document.getElementById('course-area');
   const courses = buildCourseList();
@@ -605,9 +623,10 @@ function renderCourseTable() {
           return `<tr class="${rowCls}">
             <td>${statusPickerHTML(c.code)}</td>
             <td><span class="course-code">${c.code}</span>${exclBadge}</td>
-            <td><div class="programs-tags">${c.programs.map(p =>
-              `<span class="ptag ${badgeClass(p.type)}">${p.name}</span>`
-            ).join('')}</div></td>
+            <td><div class="programs-tags">${c.reqLabels?.size
+              ? [...c.reqLabels].map(l => `<span class="ptag" style="background:#f0f9ff;color:#007FA3">${l}</span>`).join('')
+              : c.programs.map(p => `<span class="ptag ${badgeClass(p.type)}">${p.name}</span>`).join('')
+            }</div></td>
             <td>${prereqCell || (year ? '<span style="color:var(--gray-600);font-size:12px">Y'+year+'</span>' : '<span style="color:var(--gray-600)">—</span>')}</td>
             ${state.courses ? `<td style="color:var(--gray-600);font-size:12px">${year ? 'Y'+year : '—'}</td>` : ''}
           </tr>`;
