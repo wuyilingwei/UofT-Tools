@@ -16,7 +16,7 @@ OUTPUT_DIR   = SCRIPT_DIR.parent / "public" / "planner" / "data"
 CALENDAR_URL = "https://utm.calendar.utoronto.ca"
 SECTION_URL  = f"{CALENDAR_URL}/section/"
 
-COURSE_RE    = re.compile(r"\b([A-Z]{2,4}\d{3}[YH][0-9])\b")
+COURSE_RE    = re.compile(r"\b([A-Z]{2,4}\s*\d{3}\s*[YH]\s*[0-9])\b", re.IGNORECASE)
 PROGRAM_TYPE_RE = re.compile(r"\b(Specialist|Major|Minor|Certificate)\b", re.IGNORECASE)
 
 SESSION = requests.Session()
@@ -90,7 +90,7 @@ def parse_program(path: str) -> dict | None:
     text = main.get_text(separator="\n") if main else ""
 
     # Extract all course codes mentioned anywhere in the page (flat list for Jaccard)
-    course_codes = sorted(set(COURSE_RE.findall(text)))
+    course_codes = sorted(set(_course_codes(text)))
 
     # Extract structured requirement groups
     requirementGroups = _parse_requirement_groups(soup)
@@ -107,6 +107,14 @@ def parse_program(path: str) -> dict | None:
         "courses":  course_codes,
         "requirementGroups": requirementGroups,
     }
+
+
+def _normalize_course_code(code: str) -> str:
+    return re.sub(r"\s+", "", code).upper()
+
+
+def _course_codes(text: str) -> list[str]:
+    return [_normalize_course_code(c) for c in COURSE_RE.findall(text or "")]
 
 
 def _parse_requirement_groups(soup) -> dict:
@@ -156,6 +164,9 @@ def _parse_requirement_groups(soup) -> dict:
                     in_notes = True
                     continue
 
+                # Non-notes heading — reset notes flag
+                in_notes = False
+
                 # Heading/descriptive paragraph
                 if label and not in_notes:
                     # Flush previous section
@@ -204,9 +215,9 @@ def _parse_list_item(li) -> list[list[str]]:
         prev_text = ""
         for child in el.children:
             if hasattr(child, 'name') and child.name == 'a':
-                m = COURSE_RE.search(child.get('href', ''))
-                if m:
-                    items.append((m.group(1), prev_text))
+                codes = _course_codes(child.get_text(" ") + " " + child.get('href', ''))
+                if codes:
+                    items.append((codes[0], prev_text))
                     prev_text = ""
             elif isinstance(child, NavigableString):
                 prev_text += str(child)
@@ -222,7 +233,7 @@ def _parse_list_item(li) -> list[list[str]]:
 
     items = _walk_children(li)
     if not items:
-        codes = COURSE_RE.findall(li.get_text())
+        codes = _course_codes(li.get_text(" "))
         if not codes:
             return []
         return [codes]

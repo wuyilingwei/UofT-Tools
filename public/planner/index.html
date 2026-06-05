@@ -34,7 +34,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .sidebar-search{padding:10px;border-bottom:1px solid var(--gray-200)}
 .sidebar-search input{width:100%;padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none}
 .sidebar-search input:focus{border-color:var(--teal)}
-.section-list{overflow-y:auto;flex:1}
+.section-list{overflow-y:auto;flex:1;position:relative}
 .section-item{display:block;width:100%;text-align:left;padding:7px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--gray-800);border-left:3px solid transparent;transition:.1s;position:relative}
 .section-item:hover{background:var(--gray-100)}
 .section-item.active{background:#e8f4f8;border-left-color:var(--teal);color:var(--blue);font-weight:500}
@@ -47,7 +47,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .prog-header{padding:14px 18px;border-bottom:1px solid var(--gray-200);background:#fff}
 .prog-header h2{font-size:15px;font-weight:600;margin-bottom:6px}
 .prog-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:30px}
-.prog-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.1s}
+.prog-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid;transition:.1s;user-select:none}
 .prog-chip.major{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
 .prog-chip.minor{background:#dcfce7;border-color:#86efac;color:#166534}
 .prog-chip.specialist{background:#fef3c7;border-color:#fcd34d;color:#92400e}
@@ -57,6 +57,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 
 .prog-dropdown{position:relative}
 .sidebar-popup{display:none;position:absolute;top:0;left:100%;background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:101;width:320px;max-height:400px;overflow-y:auto;margin-left:4px}
+.code-link{font-family:monospace;font-weight:600;color:inherit;text-decoration:none;cursor:pointer}
+.code-link:hover{text-decoration:underline;color:var(--teal)}
 .sidebar-popup.open{display:block}
 .prog-popup-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;cursor:pointer;font-size:13px}
 .prog-popup-item:hover{background:var(--gray-50)}
@@ -387,12 +389,19 @@ function selectSection(slug, event) {
   state.activeSectionSlug = slug;
   renderSectionList(document.getElementById('section-search').value);
   renderSidebarPopup();
-  openSidebarPopup();
+  openSidebarPopup(event?.target||null);
 }
 
-// SIDEBAR POPUP
-function openSidebarPopup() {
-  document.getElementById('sidebar-popup').classList.add('open');
+
+function openSidebarPopup(anchorEl) {
+  const popup = document.getElementById('sidebar-popup');
+  if (anchorEl) {
+    const rect = anchorEl.getBoundingClientRect();
+    const sidebar = document.querySelector('.sidebar');
+    const sbRect = sidebar.getBoundingClientRect();
+    popup.style.top = (rect.top - sbRect.top) + 'px';
+  }
+  popup.classList.add('open');
 }
 
 function closeSidebarPopup() {
@@ -480,7 +489,7 @@ function renderChips() {
     return `<div class="prog-chip ${cls} ${p.intention?'intention':''}"
                  title="${p.intention?'Intention (planning)':p.type + ' — ' + (p.code||'')}">
       <span onclick="toggleIntention('${p.id}')" title="Toggle intention">${shortName}</span>
-      <span style="font-size:10px;opacity:.7">${p.code||''}</span>
+      <a class="code-link" style="font-size:10px;opacity:.7" href="https://utm.calendar.utoronto.ca/program/${p.id}" target="_blank" onclick="event.stopPropagation()" title="Open program page">${p.code||''}</a>
       <span class="chip-x" onclick="toggleProgram('${p.id}')">×</span>
     </div>`;
   }).join('');
@@ -502,9 +511,17 @@ function renderLegality() {
   const m = active.filter(p => (p.type||'').toLowerCase().includes('major'));
   const mi = active.filter(p => (p.type||'').toLowerCase().includes('minor'));
 
+  // Burden score: Specialist=4, Major=2, Minor=1
+  const burden = s.length * 4 + m.length * 2 + mi.length * 1;
+
   // Rule: at most 3 programs total
   if (active.length > 3) {
     messages.push(`⚠ ${active.length} active programs — UTM allows at most 3.`);
+  }
+
+  // Rule: total burden score must be at least 4
+  if (burden < 4) {
+    messages.push(`⚠ Program burden score is ${burden}/4 — add a specialist, major, or minors to meet the minimum.`);
   }
 
   // Rule: need at least 1 specialist OR 1 major to graduate
@@ -515,11 +532,6 @@ function renderLegality() {
   // Rule: at most 1 specialist
   if (s.length > 1) {
     messages.push(`⚠ ${s.length} specialists — UTM normally allows only 1.`);
-  }
-
-  // Rule: ≥3 minors is unusual unless balanced
-  if (mi.length >= 3) {
-    messages.push(`⚠ ${mi.length} minors — check if this exceeds maximum.`);
   }
 
   // Rule: specialist + major in the same subject area is usually redundant
@@ -540,9 +552,10 @@ function renderLegality() {
   if (!messages.length) {
     const nS=s.length, nM=m.length, nMi=mi.length;
     let v = '';
-    if (nS===1 && nM===0 && nMi<=2) v = `1 specialist${nMi?' + '+nMi+' minor(s)':''} ✓`;
-    else if (nS===0 && nM===1 && nMi<=2) v = `1 major${nMi?' + '+nMi+' minor(s)':''} ✓`;
-    else if (nS===0 && nM===2 && nMi<=1) v = `2 majors${nMi?' + '+nMi+' minor(s)':''} ✓`;
+    if (nS===1 && nM===0 && nMi<=2) v = `1 specialist${nMi?' + '+nMi+' minor(s)':''} (score: ${burden}) ✓`;
+    else if (nS===0 && nM===1 && nMi<=2) v = `1 major${nMi?' + '+nMi+' minor(s)':''} (score: ${burden}) ✓`;
+    else if (nS===0 && nM===2 && nMi<=1) v = `2 majors${nMi?' + '+nMi+' minor(s)':''} (score: ${burden}) ✓`;
+    else if (burden >= 4) v = `Score: ${burden}/4 ✓`;
     else v = '';
     if (v) { el.innerHTML = `<span style="color:var(--green)">✓ ${v}</span>`; return; }
     el.innerHTML = '';
@@ -628,7 +641,7 @@ function renderCourseTable() {
 
           return `<tr class="${rowCls}">
             <td>${statusPickerHTML(c.code)}</td>
-            <td><span class="course-code">${c.code}</span>${exclBadge}</td>
+            <td><a class="code-link" href="https://utm.calendar.utoronto.ca/course/${c.code.toLowerCase()}" target="_blank" title="Open course page">${c.code}</a>${exclBadge}</td>
             <td><div class="programs-tags">${c.reqLabels?.size
               ? [...c.reqLabels].map(l => `<span class="ptag" style="background:#f0f9ff;color:#007FA3">${l}</span>`).join('')
               : c.programs.map(p => `<span class="ptag ${badgeClass(p.type)}">${p.name}</span>`).join('')
@@ -805,9 +818,9 @@ function renderRequirementsView() {
 function _rcHTML(c) {
   const s = getStatus(c);
   const cls = s===3?' done':s===2?' s-progress':s===1?' s-planned':'';
-  // click cycles: none→done, anything→none
   const next = s < 3 ? 3 : 0;
-  return `<span class="rc${cls}" onclick="setCourseStatus('${c}',${next})" title="Click to toggle">${c}</span>`;
+  return `<span class="rc${cls}" onclick="setCourseStatus('${c}',${next})" title="Click to toggle">${c}</span>` +
+    ` <a class="code-link" style="font-size:9px" href="https://utm.calendar.utoronto.ca/course/${c.toLowerCase()}" target="_blank" onclick="event.stopPropagation()" title="Open course page">↗</a>`;
 }
 
 function _altHTML(alt) {
@@ -897,11 +910,8 @@ function addSuggested(id) {
   const prog = findProgramById(id);
   if (prog && !state.selectedPrograms.find(p => p.id === id)) {
     state.selectedPrograms.push({...prog, intention: false});
+    savePlannerState();
     renderChips(); renderCourseArea(); renderSuggestions(); refreshCoursePicks();
-  }
-}
-
-// ═══════════════════════════════ SCHEDULE BUILDER ═══════════════════
 function populateSessionSelect() {
   const sel = document.getElementById('session-select');
   const available = state.sessions.filter(s => s.value && s.value !== '');

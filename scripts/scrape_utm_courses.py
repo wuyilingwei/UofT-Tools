@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 SCRIPT_DIR   = Path(__file__).parent
 DATA_DIR     = SCRIPT_DIR.parent / "public" / "planner" / "data"
 CALENDAR     = "https://utm.calendar.utoronto.ca"
-COURSE_RE    = re.compile(r"\b([A-Z]{2,4}\d{3}[YH]\d)\b")
+COURSE_RE    = re.compile(r"\b([A-Z]{2,4}\s*\d{3}\s*[YH]\s*[0-9])\b", re.IGNORECASE)
 
 SESSION = requests.Session()
 SESSION.headers.update({
@@ -55,9 +55,9 @@ def field_codes(article: BeautifulSoup, field_name: str) -> list[str]:
     for a in el.find_all("a"):
         text = a.get_text(strip=True)
         if COURSE_RE.match(text):
-            codes.append(text)
+            codes.append(re.sub(r"\s+", "", text).upper())
     # Also extract any inline codes not wrapped in links
-    inline = COURSE_RE.findall(el.get_text())
+    inline = [re.sub(r"\s+", "", c).upper() for c in COURSE_RE.findall(el.get_text())]
     return list(dict.fromkeys(codes + [c for c in inline if c not in codes]))
 
 
