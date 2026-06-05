@@ -53,6 +53,17 @@ jobs:
             echo "ℹ No changes to commit — all calendars are already up to date."
           else
             git commit -m "chore: update all campus calendars [$(date -u +%Y-%m-%d)]"
-            git push
+            # Retry to survive races with concurrent pushes to main:
+            # a plain `git push` is rejected ("fetch first") whenever main has
+            # advanced since checkout, which fails the scheduled run.
+            for attempt in 1 2 3 4 5; do
+              if git push; then
+                echo "✓ Pushed on attempt $attempt"
+                exit 0
+              fi
+              echo "⚠ Push rejected (attempt $attempt) — rebasing onto latest main and retrying"
+              git pull --rebase origin main
+            done
+            echo "✗ Failed to push after multiple attempts" >&2
+            exit 1
           fi
-
