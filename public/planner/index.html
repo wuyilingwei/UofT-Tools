@@ -146,12 +146,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .empty-state p{margin-top:6px;font-size:13px}
 .notice{background:#fff3cd;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:12px;color:#856404;margin-bottom:10px}
 
+/* ── Course status picker ── */
+.sp{display:inline-flex;border:1px solid var(--gray-200);border-radius:5px;overflow:hidden}
+.sp-b{padding:2px 6px;border:none;border-right:1px solid var(--gray-200);background:#fff;font-size:11px;cursor:pointer;color:var(--gray-500);transition:.1s;white-space:nowrap}
+.sp-b:last-child{border-right:none}
+.sp-b:hover{background:var(--gray-100)}
+.sp-b.s-planned{background:#dbeafe;color:#1d4ed8;font-weight:600}
+.sp-b.s-progress{background:#fef9c3;color:#854d0e;font-weight:600}
+.sp-b.s-done{background:#dcfce7;color:#15803d;font-weight:600}
+.course-table tr.s-done td{opacity:.45}
+.course-table tr.s-progress td{background:#fffbeb}
+.course-table tr.s-planned td{background:#eff6ff}
+
+/* ── Data import/export ── */
+.data-btns{display:flex;gap:6px;margin-top:6px}
+.data-btn{padding:3px 9px;border:1px solid var(--gray-200);border-radius:5px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray-600);transition:.1s}
+.data-btn:hover{border-color:var(--teal);color:var(--teal)}
+
 /* ── Requirements view ── */
 .view-toggle{display:flex;gap:6px;margin-bottom:14px}
 .view-btn{padding:4px 10px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;font-size:12px;cursor:pointer;color:var(--gray-600);transition:.1s}
 .view-btn:hover{background:var(--gray-100)}
 .view-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
-.req-prog-block{margin-bottom:22px}
+.req-prog-block{margin-bottom:24px}
 .req-prog-header{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--blue);padding-bottom:6px;border-bottom:1px solid var(--gray-200);margin-bottom:6px}
 .req-kind-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-500);margin:10px 0 4px}
 .req-sec-label{font-size:12px;font-weight:600;color:var(--gray-700);margin:6px 0 3px;padding-left:2px}
@@ -164,9 +181,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
 .req-alt.partial{background:#fef9c3;border-color:#fde047}
 .req-alt .rc{font-family:monospace;font-weight:600;font-size:12px;cursor:pointer}
 .req-alt .rc:hover{text-decoration:underline}
-.req-alt .rc.done{text-decoration:line-through;opacity:.5}
+.req-alt .rc.done{text-decoration:line-through;opacity:.45}
+.req-alt .rc.s-planned{color:#1d4ed8}
+.req-alt .rc.s-progress{color:#854d0e}
 .req-sep{font-size:11px;color:var(--gray-500);font-style:italic;padding:0 2px}
 .req-plus{font-size:10px;color:var(--gray-400);margin:0 1px}
+.req-pool{margin:2px 0}
+.req-pool summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;color:var(--gray-600);padding:2px 0}
+.req-pool summary::-webkit-details-marker{display:none}
+.req-pool summary:hover{color:var(--blue)}
+.req-pool summary .req-status{padding-top:0}
+.req-pool.met summary .req-status{color:var(--green)}
+.req-pool-items{padding-left:20px;margin-top:2px;border-left:2px solid var(--gray-100)}
 </style>
 </head>
 <body>
@@ -203,6 +229,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-siz
         <div class="intention-row">
           <label><input type="checkbox" id="show-intention-toggle" onchange="renderCourseArea()"> Show intention programs (dashed)</label>
         </div>
+      </div>
+      <div class="data-btns">
+        <button class="data-btn" onclick="exportData()">⬇ Export</button>
+        <button class="data-btn" onclick="importData()">⬆ Import</button>
       </div>
     </div>
 
@@ -292,7 +322,11 @@ const state = {
 
   activeSectionSlug: null,
   selectedPrograms:  [],  // [{id,name,type,courses,intention}]
-  completedCourses:  new Set(JSON.parse(localStorage.getItem('utm_completed') || '[]')),
+  courseStatus: (() => {
+    const m = new Map(Object.entries(JSON.parse(localStorage.getItem('utm_course_status') || '{}')).map(([k,v]) => [k,+v]));
+    for (const c of JSON.parse(localStorage.getItem('utm_completed') || '[]')) if (!m.has(c)) m.set(c, 3);
+    return m;
+  })(),
 
   prefs: {density:'compact', time:'any', freeDays:new Set(), busyDays:new Set()},
   scheduledCourses: [],  // course codes picked in schedule tab
@@ -529,21 +563,21 @@ function renderCourseTable() {
     return;
   }
 
-  const done   = courses.filter(c => state.completedCourses.has(c.code)).length;
-  const pending = courses.length - done;
-
-  // Build set of all course codes across selected programs for exclusion checking
+  const nDone     = courses.filter(c => getStatus(c.code) === 3).length;
+  const nProgress = courses.filter(c => getStatus(c.code) === 2).length;
+  const nPlanned  = courses.filter(c => getStatus(c.code) === 1).length;
   const allSelectedCodes = new Set(courses.map(c => c.code));
 
   area.innerHTML = viewToggleHTML() + `
     <div class="course-stats">
       <span class="stat stat-total">📋 ${courses.length} total</span>
-      <span class="stat stat-pending">⏳ ${pending} pending</span>
-      <span class="stat stat-done">✓ ${done} completed</span>
+      ${nPlanned  ? `<span class="stat" style="background:#dbeafe;color:#1d4ed8">📅 ${nPlanned} planned</span>` : ''}
+      ${nProgress ? `<span class="stat" style="background:#fef9c3;color:#854d0e">📖 ${nProgress} in progress</span>` : ''}
+      <span class="stat stat-done">✓ ${nDone} done</span>
     </div>
     <table class="course-table">
       <thead><tr>
-        <th style="width:28px"></th>
+        <th>Status</th>
         <th>Course</th>
         <th>Required by</th>
         <th>${state.courses ? 'Prereqs' : 'Year'}</th>
@@ -551,36 +585,33 @@ function renderCourseTable() {
       </tr></thead>
       <tbody>
         ${courses.map(c => {
-          const isDone = state.completedCourses.has(c.code);
+          const st = getStatus(c.code);
+          const rowCls = ['','s-planned','s-progress','s-done'][st] || '';
           const year = courseYear(c.code);
           const meta = state.courses ? state.courses[c.code] : null;
+          const exclConflicts = meta ? (meta.exclusions||[]).filter(ex => allSelectedCodes.has(ex)) : [];
 
-          // Exclusion conflict: any of this course's exclusions is also in our selected list
-          const exclConflicts = meta ? (meta.exclusions || []).filter(ex => allSelectedCodes.has(ex)) : [];
-
-          // Prereq status
           let prereqCell = '';
           if (meta) {
             const prereqs = meta.prereqs || [];
             if (!prereqs.length) {
               prereqCell = '<span class="prereq-none">—</span>';
             } else {
-              const unmet = prereqs.filter(p => !state.completedCourses.has(p));
+              const unmet = prereqs.filter(p => !isDone(p));
               if (!unmet.length) {
                 prereqCell = '<span class="prereq-met">✓ met</span>';
               } else {
                 const tip = 'Missing: ' + unmet.join(', ');
-                prereqCell = `<span class="prereq-warn" title="${tip}">⚠ ${unmet.slice(0,2).join(', ')}${unmet.length>2?' +':''}${unmet.length>2?unmet.length-2+' more':''}</span>`;
+                prereqCell = `<span class="prereq-warn" title="${tip}">⚠ ${unmet.slice(0,2).join(', ')}${unmet.length>2?' +'+(unmet.length-2)+' more':''}</span>`;
               }
             }
           }
 
           const exclBadge = exclConflicts.length
-            ? `<span class="excl-flag" title="Exclusion conflict with: ${exclConflicts.join(', ')}">⊘</span>`
-            : '';
+            ? `<span class="excl-flag" title="Exclusion: ${exclConflicts.join(', ')}">⊘</span>` : '';
 
-          return `<tr class="${isDone?'done':''}">
-            <td><button class="check-btn ${isDone?'done':''}" onclick="toggleCompleted('${c.code}')">${isDone?'✓':''}</button></td>
+          return `<tr class="${rowCls}">
+            <td>${statusPickerHTML(c.code)}</td>
             <td><span class="course-code">${c.code}</span>${exclBadge}</td>
             <td><div class="programs-tags">${c.programs.map(p =>
               `<span class="ptag ${badgeClass(p.type)}">${p.name}</span>`
@@ -598,6 +629,69 @@ function viewToggleHTML() {
     <button class="view-btn ${state.viewMode==='list'?'active':''}" onclick="switchViewMode('list')">Course List</button>
     <button class="view-btn ${state.viewMode==='requirements'?'active':''}" onclick="switchViewMode('requirements')">Requirements</button>
   </div>`;
+}
+
+// ═══════════════════════════════ STATUS HELPERS ══════════════════════
+function getStatus(code) { return state.courseStatus.get(code) || 0; }
+function isDone(code)    { return getStatus(code) === 3; }
+
+function setCourseStatus(code, status) {
+  if (status === 0) state.courseStatus.delete(code);
+  else state.courseStatus.set(code, status);
+  localStorage.setItem('utm_course_status', JSON.stringify(Object.fromEntries(state.courseStatus)));
+  renderCourseArea();
+  refreshCoursePicks();
+}
+
+function statusPickerHTML(code) {
+  const s = getStatus(code);
+  return `<div class="sp">
+    <button class="sp-b${s===0?' s-none':''}" onclick="setCourseStatus('${code}',0)">无</button>
+    <button class="sp-b${s===1?' s-planned':''}" onclick="setCourseStatus('${code}',1)">计划</button>
+    <button class="sp-b${s===2?' s-progress':''}" onclick="setCourseStatus('${code}',2)">学中</button>
+    <button class="sp-b${s===3?' s-done':''}" onclick="setCourseStatus('${code}',3)">✓</button>
+  </div>`;
+}
+
+// ═══════════════════════════════ IMPORT / EXPORT ══════════════════════
+function exportData() {
+  const data = {
+    version: 2,
+    courseStatus: Object.fromEntries(state.courseStatus),
+    selectedPrograms: state.selectedPrograms.map(p => ({id: p.id, intention: p.intention})),
+  };
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'})),
+    download: 'utm-planner.json',
+  });
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function importData() {
+  const input = Object.assign(document.createElement('input'), {type:'file', accept:'.json'});
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (data.courseStatus) {
+          state.courseStatus = new Map(Object.entries(data.courseStatus).map(([k,v]) => [k,+v]));
+          localStorage.setItem('utm_course_status', JSON.stringify(data.courseStatus));
+        }
+        if (data.selectedPrograms && state.programs) {
+          state.selectedPrograms = [];
+          for (const s of data.selectedPrograms) {
+            const p = findProgramById(s.id);
+            if (p) state.selectedPrograms.push({...p, intention: !!s.intention});
+          }
+        }
+        renderChips(); renderCourseArea(); renderSuggestions(); refreshCoursePicks();
+      } catch(err) { alert('Import failed: ' + err.message); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
 }
 
 function switchViewMode(mode) {
@@ -647,21 +741,46 @@ function renderRequirementsView() {
   area.innerHTML = html;
 }
 
+function _rcHTML(c) {
+  const s = getStatus(c);
+  const cls = s===3?' done':s===2?' s-progress':s===1?' s-planned':'';
+  // click cycles: none→done, anything→none
+  const next = s < 3 ? 3 : 0;
+  return `<span class="rc${cls}" onclick="setCourseStatus('${c}',${next})" title="点击切换完成状态">${c}</span>`;
+}
+
+function _altHTML(alt) {
+  const cls = alt.met ? 'met' : alt.done > 0 ? 'partial' : '';
+  return `<span class="req-alt ${cls}">${alt.andGroup.map(_rcHTML).join('<span class="req-plus">+</span>')}</span>`;
+}
+
 function buildReqLineHTML(groups) {
   const alts = groups.map(andGroup => {
-    const done = andGroup.filter(c => state.completedCourses.has(c)).length;
+    const done = andGroup.filter(c => isDone(c)).length;
     return {andGroup, done, total: andGroup.length, met: done === andGroup.length};
   });
-  const lineMet = alts.some(a => a.met);
-  const altsHTML = alts.map((alt, i) => {
-    const cls = alt.met ? 'met' : alt.done > 0 ? 'partial' : '';
-    const codesHTML = alt.andGroup.map(c =>
-      `<span class="rc${state.completedCourses.has(c)?' done':''}" onclick="toggleCompleted('${c}')" title="Click to toggle">${c}</span>`
-    ).join('<span class="req-plus">+</span>');
-    return (i > 0 ? '<span class="req-sep">or</span>' : '') + `<span class="req-alt ${cls}">${codesHTML}</span>`;
-  }).join('');
-  return `<div class="req-line${lineMet?' met':''}">
-    <span class="req-status">${lineMet ? '✓' : '○'}</span>
+  const anyMet = alts.some(a => a.met);
+
+  // Large elective pool (≥4 alternatives) → collapsible <details>
+  if (alts.length >= 4) {
+    const metCount = alts.filter(a => a.met).length;
+    const label = `选修 1 门 <span style="font-size:11px;color:var(--gray-500)">${alts.length} 选项${metCount ? ' · '+metCount+' 已完成' : ''}</span>`;
+    const items = alts.map(alt => `<div class="req-line${alt.met?' met':''}">
+      <span class="req-status">${alt.met?'✓':'○'}</span>
+      <div class="req-alts">${_altHTML(alt)}</div>
+    </div>`).join('');
+    return `<details class="req-pool${anyMet?' met':''}">
+      <summary><span class="req-status">${anyMet?'✓':'○'}</span> ${label}</summary>
+      <div class="req-pool-items">${items}</div>
+    </details>`;
+  }
+
+  // Regular line (1–3 alternatives)
+  const altsHTML = alts.map((alt, i) =>
+    (i > 0 ? '<span class="req-sep">or</span>' : '') + _altHTML(alt)
+  ).join('');
+  return `<div class="req-line${anyMet?' met':''}">
+    <span class="req-status">${anyMet?'✓':'○'}</span>
     <div class="req-alts">${altsHTML}</div>
   </div>`;
 }
@@ -672,13 +791,6 @@ function courseYear(code) {
   return Math.floor(parseInt(m[0]) / 100);
 }
 
-function toggleCompleted(code) {
-  if (state.completedCourses.has(code)) state.completedCourses.delete(code);
-  else state.completedCourses.add(code);
-  localStorage.setItem('utm_completed', JSON.stringify([...state.completedCourses]));
-  renderCourseArea();
-  refreshCoursePicks();
-}
 
 // ═══════════════════════════════ SUGGESTIONS ════════════════════════
 function renderSuggestions() {
@@ -702,7 +814,13 @@ function renderSuggestions() {
     }
   }
   scores.sort((a,b) => b.shared - a.shared);
-  const top = scores.slice(0, 8);
+  // Dedup: keep highest-scoring entry per base name
+  const seen = new Set();
+  const top = scores.filter(s => {
+    const key = s.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  }).slice(0, 8);
 
   if (!top.length) { bar.style.display='none'; return; }
   bar.style.display='block';
@@ -747,7 +865,7 @@ async function loadTimetable(session) {
 
 function refreshCoursePicks() {
   const container = document.getElementById('course-picks');
-  const pending = buildCourseList().filter(c => !state.completedCourses.has(c.code));
+  const pending = buildCourseList().filter(c => !isDone(c.code));
   if (!pending.length) {
     container.innerHTML = '<div style="font-size:12px;color:var(--gray-600)">No pending courses. Add programs in the Planner tab.</div>';
     state.scheduledCourses = [];
