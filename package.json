@@ -6,7 +6,7 @@
   "description": "Unofficial utility suite for University of Toronto students.",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node copy-data.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "deploy": "wrangler deploy"

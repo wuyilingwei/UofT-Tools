@@ -12,6 +12,8 @@ from pathlib import Path
 # This file lives at scripts/common/paths.py → parents[2] is the repo root.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-PUBLIC_DIR = REPO_ROOT / "public"
-CALENDAR_DIR = PUBLIC_DIR / "calendar"
-PLANNER_DATA_DIR = PUBLIC_DIR / "planner" / "data"
+# Scraper output lives in data/ (copied into the web build output by
+# copy-data.mjs). It is intentionally separate from the web/ app sources.
+DATA_DIR = REPO_ROOT / "data"
+CALENDAR_DIR = DATA_DIR / "calendar"
+PLANNER_DATA_DIR = DATA_DIR / "planner" / "data"

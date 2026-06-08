@@ -2,23 +2,26 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'node:path'
 
-const root = import.meta.dirname
+const repoRoot = import.meta.dirname
+const webRoot = resolve(repoRoot, 'web')
 
-// Multi-page app: each page is its own entry HTML mounting an isolated Vue app.
-// publicDir defaults to ./public — the scraper-generated *.ics and planner data
-// JSON are copied verbatim into dist/, so runtime fetch paths stay unchanged.
+// Multi-page app. The web app sources live in web/; scraper data lives in
+// data/ and is copied into the build output by copy-data.mjs (the "build"
+// npm script runs it right after `vite build`).
 export default defineConfig({
+  root: webRoot,
+  publicDir: false,
   plugins: [vue()],
   build: {
-    outDir: 'dist',
+    outDir: resolve(repoRoot, 'dist'),
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: resolve(root, 'index.html'),
-        faq: resolve(root, 'faq.html'),
-        statement: resolve(root, 'statement.html'),
-        calendar: resolve(root, 'calendar/index.html'),
-        planner: resolve(root, 'planner/index.html'),
+        main: resolve(webRoot, 'index.html'),
+        faq: resolve(webRoot, 'faq.html'),
+        statement: resolve(webRoot, 'statement.html'),
+        calendar: resolve(webRoot, 'calendar/index.html'),
+        planner: resolve(webRoot, 'planner/index.html'),
       },
     },
   },

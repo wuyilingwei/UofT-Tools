@@ -47,8 +47,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/calendar/utm.ics public/calendar/utsc.ics public/calendar/artsci.ics
-          git add public/calendar/utm-filtered.ics public/calendar/utsc-filtered.ics public/calendar/artsci-filtered.ics
+          git add data/calendar/utm.ics data/calendar/utsc.ics data/calendar/artsci.ics
+          git add data/calendar/utm-filtered.ics data/calendar/utsc-filtered.ics data/calendar/artsci-filtered.ics
           if git diff --staged --quiet; then
             echo "ℹ No changes to commit — all calendars are already up to date."
           else
