@@ -16,7 +16,7 @@ const showViews = computed(() => state.friend.enabled && state.friendBoard.lengt
     </div>
 
     <div v-if="!activeBoard.length" class="no-data">
-      Select a scheduling range and courses, then click Generate Schedule.
+      Select courses to preview a schedule.
     </div>
 
     <div v-else class="term-cols">
@@ -40,8 +40,8 @@ const showViews = computed(() => state.friend.enabled && state.friendBoard.lengt
 }
 .bv-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 .bv-hint { font-size: 11px; color: var(--gray-500); margin-left: auto; }
-.term-cols { display: flex; gap: 18px; align-items: flex-start; }
-.term-col { flex: 1 1 0; min-width: 560px; }
+.term-cols { display: flex; gap: 14px; align-items: flex-start; }
+.term-col { flex: 1 1 0; min-width: 460px; }
 .term-head {
   display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 700;
   color: var(--blue); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid var(--gray-200);

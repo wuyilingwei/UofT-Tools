@@ -4,6 +4,8 @@ const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2'
 
 // Short, grid-friendly term label from a full session label.
 export function shortTerm(label = '') {
+  if (/summer/i.test(label) && /full/i.test(label)) return 'Summer Full'
+  if (/fall-winter|full year/i.test(label)) return 'Full Year'
   if (/fall/i.test(label)) return 'Fall'
   if (/winter/i.test(label)) return 'Winter'
   if (/summer/i.test(label) && /first/i.test(label)) return 'Summer F'
@@ -12,8 +14,15 @@ export function shortTerm(label = '') {
   return label
 }
 
-// Group the flat session list into scheduling "scopes". A scope spans one or
-// two terms; dual-term scopes (Fall-Winter, Summer F+S) render side by side.
+function scopeLabel(session) {
+  if (/summer/i.test(session.label || '') && /full/i.test(session.label || '')) {
+    return (session.label || '').replace(/\s*Full Session\s*/i, ' ').replace(/\s*\(Y\)\s*$/, '').trim()
+  }
+  return session.label
+}
+
+// Group the flat session list into scheduling "scopes". A combined scope spans
+// its component timetable files plus the full-session timetable rendered beside them.
 //   [{ id, label, terms: [{value,label}], single? }]
 export function buildScopes(sessions) {
   const byValue = Object.fromEntries(sessions.map(s => [s.value, s]))
@@ -23,9 +32,9 @@ export function buildScopes(sessions) {
     const v = s.value
     if (v.includes('-')) {
       const [a, b] = v.split('-')
-      if (byValue[a] && byValue[b]) scopes.push({ id: v, label: s.label, terms: [term(a), term(b)] })
-    } else if (byValue[v + 'F'] && byValue[v + 'S']) {
-      scopes.push({ id: v, label: s.label, terms: [term(v + 'F'), term(v + 'S')] })
+      if (byValue[a] && byValue[b]) scopes.push({ id: v, label: s.label, terms: [term(a), term(b), term(v)] })
+    } else if (!/[FS]$/.test(v) && byValue[v + 'F'] && byValue[v + 'S']) {
+      scopes.push({ id: v, label: scopeLabel(s), terms: [term(v + 'F'), term(v + 'S'), term(v)] })
     }
   }
   for (const s of sessions) {
@@ -158,6 +167,51 @@ export function buildPairSchedule(timetable, shared, yourSolo, friendSolo, prefs
   markConflicts(you)
   markConflicts(friend)
   return { you, friend }
+}
+
+export function buildCourseAvailability(scopeTerms, timetables) {
+  const map = {}
+  for (const term of scopeTerms || []) {
+    const tt = timetables[term.value]
+    if (!tt || !tt.courses) continue
+    for (const c of tt.courses) {
+      if (!map[c.code]) map[c.code] = []
+      if (!map[c.code].includes(term.label)) map[c.code].push(term.label)
+    }
+  }
+  return map
+}
+
+export function analyzeCourseConflicts(scopeTerms, timetables, selectedCodes, prefs, candidateCodes = []) {
+  const terms = scopeTerms || []
+  const selected = [...new Set(selectedCodes || [])]
+  const candidates = [...new Set(candidateCodes.length ? candidateCodes : selected)]
+  const availability = buildCourseAvailability(terms, timetables)
+  const anyPublished = terms.some(term => (timetables[term.value]?.courseCount || 0) > 0)
+  const hints = {}
+
+  for (const code of candidates) {
+    if (selected.includes(code)) continue
+    const offeredTerms = terms.filter(term => availability[code]?.includes(term.label))
+    if (!offeredTerms.length) {
+      hints[code] = { conflict: true, reason: anyPublished ? 'Not offered in this range' : 'Timetable unpublished' }
+      continue
+    }
+
+    const fits = offeredTerms.some(term => {
+      const tt = timetables[term.value]
+      if (!tt || !(tt.courseCount || 0)) return false
+      const offered = new Set((tt.courses || []).map(c => c.code))
+      const termCourses = [...selected, code].filter(c => offered.has(c))
+      const results = buildSchedule(tt, termCourses, prefs)
+      const candidate = results.find(r => r.code === code)
+      return candidate && !candidate.missing && !results.some(r => r.conflict)
+    })
+
+    if (!fits) hints[code] = { conflict: true, reason: 'No non-conflicting section found' }
+  }
+
+  return hints
 }
 
 // ── Grid layout ──

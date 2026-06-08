@@ -104,9 +104,14 @@
 
 /* ── Schedule Builder ── */
 #schedule-panel{gap:0}
-.sched-sidebar{width:240px;flex-shrink:0;border-right:1px solid var(--gray-200);overflow-y:auto;padding:14px;background:var(--gray-50)}
-.sched-sidebar h3{font-size:14px;font-weight:600;margin-bottom:10px}
-.sched-sidebar label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.3px}
+.sched-controls{width:520px;flex-shrink:0;border-right:1px solid var(--gray-200);overflow-y:auto;background:var(--gray-50);display:flex}
+.sched-left,.sched-settings{padding:14px;min-width:0}
+.sched-left{width:300px;border-right:1px solid var(--gray-200)}
+.sched-settings{width:220px}
+.sched-controls h3{font-size:14px;font-weight:600;margin-bottom:10px}
+.sched-controls label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.3px}
+.sched-empty{font-size:12px;color:var(--gray-600)}
+.sched-notice{margin-top:12px;font-size:12px;color:var(--gray-600);line-height:1.5}
 .pref-group{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}
 .pref-btn{padding:4px 10px;border:1px solid var(--gray-200);border-radius:20px;background:#fff;cursor:pointer;font-size:12px;transition:.1s}
 .pref-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
@@ -114,12 +119,11 @@
 .day-check{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer}
 .day-check input{cursor:pointer}
 .course-picks{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
-.course-pick{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;cursor:pointer;transition:.1s}
+.course-pick{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;cursor:pointer;transition:.1s;flex-wrap:wrap}
 .course-pick.selected{background:#e8f4f8;border-color:var(--teal)}
+.course-pick.conflict{background:#fff5f5;border-color:#f5b5b5}
 .course-pick input[type=checkbox]{cursor:pointer}
 .session-select{width:100%;padding:6px 8px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;margin-bottom:10px}
-.gen-btn{width:100%;padding:9px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);font-size:14px;font-weight:600;cursor:pointer;margin-top:10px;transition:.15s}
-.gen-btn:hover{background:var(--blue-light)}
 
 /* ── Timetable grid ── */
 .grid-area{flex:1;overflow:auto;padding:14px}

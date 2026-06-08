@@ -1,6 +1,9 @@
-import { reactive, computed } from 'vue'
+import { reactive, computed, watch } from 'vue'
 import { buildCourseList, computeLegality, computeSuggestions } from './lib/courses.js'
-import { buildSchedule, buildScopes, buildPairSchedule } from './lib/scheduling.js'
+import {
+  buildSchedule, buildScopes, buildPairSchedule,
+  buildCourseAvailability, analyzeCourseConflicts,
+} from './lib/scheduling.js'
 
 const BASE = ''
 const LS_STATUS = 'utm_course_status'
@@ -77,18 +80,29 @@ export const currentScope = computed(() => scopes.value.find(s => s.id === state
 // timetables are loaded). Lets the picker show availability before scheduling.
 export const availability = computed(() => {
   const scope = currentScope.value
-  const map = {}
-  if (!scope) return map
-  for (const term of scope.terms) {
-    const tt = state.timetables[term.value]
-    if (!tt || !tt.courses) continue
-    for (const c of tt.courses) {
-      if (!map[c.code]) map[c.code] = []
-      if (!map[c.code].includes(term.label)) map[c.code].push(term.label)
-    }
-  }
-  return map
+  return scope ? buildCourseAvailability(scope.terms, state.timetables) : {}
 })
+
+export const scheduleSelection = computed(() => ({
+  courses: [...state.scheduledCourses],
+  friendEnabled: state.friend.enabled,
+  friendCourses: [...state.friend.courses],
+  scopeId: state.scopeId,
+  prefs: prefsObj(),
+}))
+
+export const courseConflictHints = computed(() => {
+  const scope = currentScope.value
+  if (!scope) return {}
+  return analyzeCourseConflicts(
+    scope.terms,
+    state.timetables,
+    state.scheduledCourses,
+    prefsObj(),
+    pendingCourses.value.map(c => c.code),
+  )
+})
+export const courseAvailability = availability
 
 // ── Status helpers ──
 export function getStatus(code) { return state.courseStatus[code] || 0 }
@@ -206,12 +220,14 @@ export function toggleScheduledCourse(code, checked) {
   } else {
     state.scheduledCourses = state.scheduledCourses.filter(c => c !== code)
   }
+  queueScheduleRefresh()
 }
 
 // Prune deselected/completed courses; called when entering the schedule tab.
 export function syncScheduledCourses() {
   const pending = pendingCourses.value
   state.scheduledCourses = state.scheduledCourses.filter(c => pending.find(p => p.code === c))
+  queueScheduleRefresh()
 }
 
 async function ensureTimetable(value) {
@@ -221,6 +237,7 @@ async function ensureTimetable(value) {
     data = await fetch(BASE + `/planner/data/utm-timetable-${value}.json`).then(r => r.json())
   } catch { data = { courses: [], courseCount: 0 } }
   state.timetables[value] = data
+  queueScheduleRefresh()
   return data
 }
 
@@ -233,7 +250,9 @@ async function ensureScopeTimetables() {
 export async function onScopeChange() {
   state.board = []
   state.friendBoard = []
-  await ensureScopeTimetables()   // load now so availability badges appear before scheduling
+  state.schedNotice = 'Loading timetable…'
+  await ensureScopeTimetables()
+  queueScheduleRefresh()
 }
 
 function prefsObj() {
@@ -256,33 +275,48 @@ function scheduleScope(scope, courses) {
   })
 }
 
-export async function generateSchedule() {
+let refreshTimer = null
+let refreshRun = 0
+
+export function queueScheduleRefresh() {
+  if (refreshTimer) clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => { refreshSchedule() }, 100)
+}
+
+export async function refreshSchedule() {
+  const run = ++refreshRun
   const scope = currentScope.value
   if (!scope) { state.schedNotice = 'Please select a scheduling range.'; return }
   const friendOn = state.friend.enabled && state.friend.courses.length
   if (!state.scheduledCourses.length && !friendOn) {
-    state.schedNotice = 'Select at least one course to schedule.'; return
+    state.board = []
+    state.friendBoard = []
+    state.schedNotice = 'Select courses to preview a schedule.'
+    return
   }
 
   state.schedNotice = 'Loading timetable…'
   await ensureScopeTimetables()
+  if (run !== refreshRun) return
 
   if (friendOn) {
-    buildPairBoards(scope)        // Phase E: co-schedule shared sections
+    buildPairBoards(scope)
   } else {
     state.board = scheduleScope(scope, state.scheduledCourses)
     state.friendBoard = []
+    state.scheduleView = 'you'
   }
 
   const board = state.board
-  const missing = board.reduce((n, t) => n + t.results.filter(r => r.missing).length, 0)
   const conflicts = board.reduce((n, t) => n + t.results.filter(r => r.conflict).length, 0)
   const unpublished = board.some(t => !t.published)
-  state.schedNotice = unpublished ? '⚠ One or more terms have no published timetable yet.'
-    : conflicts ? `⚠ ${conflicts} time conflict(s) detected.`
-      : missing ? `⚠ ${missing} course(s) not found in the selected term(s).`
-        : '✓ Schedule generated.'
+  const hintCount = Object.keys(courseConflictHints.value).length
+  state.schedNotice = unpublished ? 'One or more terms have no published timetable yet.'
+    : conflicts || hintCount ? `${conflicts + hintCount} conflict warning(s). Adjust courses or preferences.`
+      : 'Schedule updated.'
 }
+
+export const generateSchedule = refreshSchedule
 
 // ── Friend co-scheduling (Phase E) ──
 export function toggleFriend(on) {
@@ -292,17 +326,20 @@ export function toggleFriend(on) {
     state.friendBoard = []
     state.scheduleView = 'you'
   }
+  queueScheduleRefresh()
 }
 
 export function addFriendCourse(code) {
   const c = (code || '').toUpperCase().replace(/\s+/g, '')
   if (!isValidCourseCode(c)) return false
   if (!state.friend.courses.includes(c)) state.friend.courses.push(c)
+  queueScheduleRefresh()
   return true
 }
 
 export function removeFriendCourse(code) {
   state.friend.courses = state.friend.courses.filter(x => x !== code)
+  queueScheduleRefresh()
 }
 
 function buildPairBoards(scope) {
@@ -322,6 +359,10 @@ function buildPairBoards(scope) {
   state.friendBoard = friend
 }
 
+watch(scheduleSelection, () => {
+  queueScheduleRefresh()
+}, { deep: true })
+
 // ── Init ──
 export async function init() {
   const [progs, sess] = await Promise.all([
@@ -332,7 +373,7 @@ export async function init() {
   state.sessions = sess
   loadSavedPlanner()
   const sc = buildScopes(sess)
-  if (sc.length) { state.scopeId = sc[0].id; ensureScopeTimetables() }
+  if (sc.length) { state.scopeId = sc[0].id; onScopeChange() }
 
   // Background, non-blocking: prereq/exclusion metadata.
   fetch(BASE + '/planner/data/utm-courses.json')
