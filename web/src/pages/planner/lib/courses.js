@@ -8,6 +8,11 @@ export function courseYear(code) {
   return Math.floor(parseInt(m[0]) / 100)
 }
 
+// Credit weight of a course code: Y courses count 1.0, H (half) courses 0.5.
+export function courseCredit(code) {
+  return /Y\d$/i.test(code || '') ? 1.0 : 0.5
+}
+
 export function badgeClass(type) {
   if (!type) return ''
   const t = type.toLowerCase()
@@ -174,9 +179,20 @@ export function buildReqLine(groups, isSatisfied) {
 
 // Whether a requirement block's courses are satisfied. Returns null for blocks
 // with no course codes (headings / credit-only notes — no status icon shown).
-// "or" lines need any code; otherwise all codes must be satisfied.
+//
+// Credit-pool lines ("0.5 credit from A or B …", "1.0 credit from …") are met
+// only when the SUM of actual credits of the satisfied courses reaches the
+// stated amount (H = 0.5, Y = 1.0) — not merely when any one course is taken.
+// Otherwise: "or" lines need any code; other lines need every code.
 export function reqLineMet(block, isSatisfied) {
   const codes = block.codes || []
   if (!codes.length) return null
-  return / or /i.test(block.text || '') ? codes.some(isSatisfied) : codes.every(isSatisfied)
+  const text = block.text || ''
+  const m = text.match(/(\d+(?:\.\d+)?)\s*(?:additional\s+)?credits?\s+(?:from|of|in|at|toward)/i)
+  if (m) {
+    const need = parseFloat(m[1])
+    const have = codes.filter(isSatisfied).reduce((n, c) => n + courseCredit(c), 0)
+    return have >= need - 1e-9
+  }
+  return / or /i.test(text) ? codes.some(isSatisfied) : codes.every(isSatisfied)
 }
