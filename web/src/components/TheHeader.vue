@@ -10,7 +10,6 @@ const links = [
 <template>
   <header class="nav">
     <router-link to="/" class="brand">
-      <span class="dot"></span>
       <span>UofT Tools</span>
     </router-link>
     <nav class="links">
@@ -45,12 +44,6 @@ const links = [
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: .01em;
-}
-.brand .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--gold);
 }
 .links {
   display: flex;
