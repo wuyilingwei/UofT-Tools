@@ -126,7 +126,7 @@
 
 /* ── Timetable grid ── */
 .grid-area{flex:1;overflow:auto;padding:14px}
-.grid-wrap{position:relative;min-width:600px}
+.grid-wrap{position:relative;width:100%;min-width:300px}
 .grid-header{display:grid;grid-template-columns:50px repeat(5,1fr);margin-bottom:2px}
 .grid-day-label{text-align:center;font-size:12px;font-weight:600;color:var(--gray-600);padding:4px}
 .grid-body{display:grid;grid-template-columns:50px repeat(5,1fr);position:relative}

@@ -70,7 +70,8 @@ export const filteredSections = computed(() => {
 export const popupSection = computed(() =>
   state.programs?.sections.find(s => s.slug === state.activeSectionSlug) || null,
 )
-export const pendingCourses = computed(() => courseList.value.filter(c => !isDone(c.code)))
+// Only courses explicitly marked "Plan" (status 1) are schedulable / shown on the board.
+export const pendingCourses = computed(() => courseList.value.filter(c => getStatus(c.code) === 1))
 
 // ── Scheduling scopes / availability ──
 export const scopes = computed(() => buildScopes(state.sessions))

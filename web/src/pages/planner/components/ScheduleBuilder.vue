@@ -60,7 +60,7 @@ const DAYS = [
       <label>Courses to Schedule</label>
       <div class="course-picks">
         <div v-if="!pendingCourses.length" class="sched-empty">
-          No pending courses. Add programs or courses in the Planner tab.
+          No planned courses yet. Mark courses as &ldquo;Plan&rdquo; in the Program Planner tab to schedule them.
         </div>
         <label
           v-for="c in pendingCourses"
