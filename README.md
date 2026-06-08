@@ -24,16 +24,30 @@ Automatically-updated calendar feeds (.ics files) for three University of Toront
 
 Calendars are synchronized daily via GitHub Actions with the latest course schedules and important academic dates.
 
-[View Calendar Feeds](https://uoft.wuyilingwei.com/ics)
+[View Calendar Feeds](https://uoft.wuyilingwei.com/calendar/)
+
+### 📋 UTM Course Planner
+Browse UTM programs, see required courses and structured requirements, track your progress, and build a weekly schedule from TTB timetable data.
+
+[Open Planner](https://uoft.wuyilingwei.com/planner/)
 
 ---
 
 ## Technical Overview
 
-- **Frontend**: Pure HTML/CSS/JavaScript (no frameworks), hosted on Cloudflare Pages
-- **Backend**: Python web scraper (Playwright + BeautifulSoup), runs daily via GitHub Actions
-- **Deployment**: Static site at `docs/` directory, deployed to Cloudflare Pages
+- **Frontend**: Vue 3 + Vite multi-page app (`src/pages/*`), built to static assets and hosted on Cloudflare Pages
+- **Backend**: Python web scrapers (Playwright + BeautifulSoup), organised by module under `scripts/{calendar,planner,common}/`, run on a schedule via GitHub Actions
+- **Deployment**: `npm run build` outputs to `dist/` (the Cloudflare Pages publish directory); scraper-generated `*.ics` and planner data JSON live in `public/` and are copied into the build verbatim
 - **Updates**: Automatic calendar sync every 24 hours
+
+### Local development
+
+```bash
+npm install
+npm run dev      # Vite dev server (all pages)
+npm run build    # production build → dist/
+npm test         # Vitest unit + component tests
+```
 
 ---
 

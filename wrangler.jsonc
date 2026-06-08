@@ -1,12 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "uoft-tools",
+  // Cloudflare account "My" (wuyilingwei510v@outlook.com). Not a secret — an
+  // OAuth/API token is still required to deploy. Move to the CLOUDFLARE_ACCOUNT_ID
+  // env var instead if you prefer to keep it out of the repo.
+  "account_id": "df4481f3ce1fa0394b4617442a97d147",
   "compatibility_date": "2026-05-28",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "public"
+    "directory": "dist"
   },
   "compatibility_flags": [
     "nodejs_compat"

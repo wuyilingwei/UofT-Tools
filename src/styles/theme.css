@@ -1,0 +1,28 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   UofT Tools — shared design tokens & base styles for content pages
+   (home / faq / statement / calendar). The planner app keeps its own denser
+   token set in src/pages/planner/planner.css.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --blue:   #002a5c;
+  --gold:   #e8b400;
+  --grey:   #D0D5E1;
+  --light:  #f5f7fa;
+  --border: #dde2ea;
+  --text:   #1a1a2e;
+  --muted:  #5a6175;
+  --radius: 10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--light);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#app { display: flex; flex-direction: column; flex: 1; min-height: 100vh; }
