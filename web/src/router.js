@@ -7,12 +7,14 @@ const routes = [
   { path: '/planner', name: 'planner', component: () => import('./pages/planner/PlannerApp.vue'), meta: { title: 'UTM Course Planner — UofT Tools', wide: true } },
   { path: '/faq', name: 'faq', component: () => import('./pages/Faq.vue'), meta: { title: 'FAQ — UofT Tools' } },
   { path: '/statement', name: 'statement', component: () => import('./pages/Statement.vue'), meta: { title: 'Statement — UofT Tools' } },
-  // Backward-compatible redirects from the old multi-page URLs.
+  // Backward-compatible redirects from the old multi-page .html URLs.
+  // NOTE: do NOT add trailing-slash redirects (e.g. '/calendar/' -> '/calendar').
+  // vue-router matches trailing slashes non-strictly, so '/calendar/' already
+  // resolves to the '/calendar' route; a redirect record would match its own
+  // target and loop infinitely.
   { path: '/index.html', redirect: '/' },
   { path: '/faq.html', redirect: '/faq' },
   { path: '/statement.html', redirect: '/statement' },
-  { path: '/calendar/', redirect: '/calendar' },
-  { path: '/planner/', redirect: '/planner' },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ]
 
