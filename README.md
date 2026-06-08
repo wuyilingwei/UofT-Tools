@@ -12,28 +12,10 @@ A collection of open-source tools designed to make student life at the Universit
 
 Visit **[uoft.wuyilingwei.com](https://uoft.wuyilingwei.com)** to access all tools and features.
 
----
-
-## Available Tools
-
-### 📅 Academic Calendar Subscriptions
-Automatically-updated calendar feeds (.ics files) for three University of Toronto campuses:
-- **St. George (Arts & Science)**
-- **Mississauga (UTM)**
-- **Scarborough (UTSC)**
-
-Calendars are synchronized daily via GitHub Actions with the latest course schedules and important academic dates.
-
-[View Calendar Feeds](https://uoft.wuyilingwei.com/calendar/)
-
-### 📋 UTM Course Planner
-Browse UTM programs, see required courses and structured requirements, track your progress, and build a weekly schedule from TTB timetable data.
-
-[Open Planner](https://uoft.wuyilingwei.com/planner/)
-
----
-
 ## Technical Overview
+
+<details>
+  <summary><strong>How to build & dev</strong></summary>
 
 - **Frontend**: Vue 3 + Vite multi-page app, isolated under `web/` (page entries + `web/src/`), deployed to Cloudflare (Workers static assets)
 - **Backend**: Python web scrapers (Playwright + BeautifulSoup), organised by module under `scripts/{calendar,planner,common}/`, run on a schedule via GitHub Actions
@@ -63,7 +45,7 @@ npm test                          # Vitest unit + component tests
 > Note: `npm run dev` serves the app only; the scraper data in `data/` is copied
 > in at build time, so use `npm run build && npm run preview` to test with live data.
 
----
+</details>
 
 ## Disclaimer
 
