@@ -9,22 +9,22 @@ course page to extract prerequisites, exclusions, and description.
 
 import json
 import re
+import sys
 import time
 from pathlib import Path
 
-import requests
 from bs4 import BeautifulSoup
 
-SCRIPT_DIR   = Path(__file__).parent
-DATA_DIR     = SCRIPT_DIR.parent / "public" / "planner" / "data"
+# Make the shared ``common`` package importable when run as a script.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.http import PLANNER_UA, make_session
+from common.io import write_json
+from common.paths import PLANNER_DATA_DIR as DATA_DIR
+
 CALENDAR     = "https://utm.calendar.utoronto.ca"
 COURSE_RE    = re.compile(r"\b([A-Z]{2,4}\s*\d{3}\s*[YH]\s*[0-9])\b", re.IGNORECASE)
 
-SESSION = requests.Session()
-SESSION.headers.update({
-    "User-Agent": "Mozilla/5.0 (compatible; UofT-Tools/1.0)",
-    "Accept":     "text/html",
-})
+SESSION = make_session(PLANNER_UA, {"Accept": "text/html"})
 
 
 def collect_codes_from_programs() -> set[str]:
@@ -120,7 +120,7 @@ def main() -> None:
         time.sleep(0.15)
 
     dest = DATA_DIR / "utm-courses.json"
-    dest.write_text(json.dumps(results, ensure_ascii=False, separators=(",", ":")))
+    write_json(dest, results)
     print(f"\nDone → {dest} ({len(results)} courses)")
 
 

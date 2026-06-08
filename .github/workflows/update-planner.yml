@@ -31,13 +31,13 @@ jobs:
         run: pip install -r scripts/requirements.txt
 
       - name: Scrape UTM program requirements
-        run: python scripts/scrape_utm_programs.py
+        run: python scripts/planner/scrape_utm_programs.py
 
       - name: Scrape UTM course prerequisites and exclusions
-        run: python scripts/scrape_utm_courses.py
+        run: python scripts/planner/scrape_utm_courses.py
 
       - name: Scrape TTB course timetable (UTM)
-        run: python scripts/scrape_ttb_courses.py
+        run: python scripts/planner/scrape_ttb_courses.py
 
       - name: Commit and push updated planner data (if changed)
         run: |

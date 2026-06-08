@@ -32,16 +32,16 @@ jobs:
         run: playwright install chromium --with-deps
 
       - name: Run UTM scraper
-        run: python scripts/scrape_utm.py
+        run: python scripts/calendar/scrape_utm.py
 
       - name: Run UTSC scraper
-        run: python scripts/scrape_utsc.py
+        run: python scripts/calendar/scrape_utsc.py
 
       - name: Run ArtsCI scraper
-        run: python scripts/scrape_artsci.py
+        run: python scripts/calendar/scrape_artsci.py
 
       - name: Run program-event filter (experimental)
-        run: python scripts/filter_ics.py
+        run: python scripts/calendar/filter_ics.py
 
       - name: Commit and push updated ICS files (if changed)
         run: |

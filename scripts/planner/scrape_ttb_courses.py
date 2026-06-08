@@ -3,25 +3,24 @@ Scrape UTM course timetable from TTB API and output static JSON files.
 Outputs: public/planner/data/timetable-{session}.json  (one file per session)
 """
 
-import json
 import sys
 import time
 from pathlib import Path
 
-import requests
+# Make the shared ``common`` package importable when run as a script.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.http import PLANNER_UA, make_session
+from common.io import write_json
+from common.paths import PLANNER_DATA_DIR as OUTPUT_DIR
 
-SCRIPT_DIR  = Path(__file__).parent
-OUTPUT_DIR  = SCRIPT_DIR.parent / "public" / "planner" / "data"
 REFERENCE   = "https://api.easi.utoronto.ca/ttb/reference-data"
 COURSES_API = "https://api.easi.utoronto.ca/ttb/getPageableCourses"
 UTM_DIV     = "ERIN"
 PAGE_SIZE   = 100
 
-SESSION = requests.Session()
-SESSION.headers.update({
-    "User-Agent": "Mozilla/5.0 (compatible; UofT-Tools/1.0)",
-    "Accept":     "application/json",
-    "Referer":    "https://ttb.utoronto.ca/",
+SESSION = make_session(PLANNER_UA, {
+    "Accept":  "application/json",
+    "Referer": "https://ttb.utoronto.ca/",
 })
 
 
@@ -124,14 +123,12 @@ def main() -> None:
             "courses":       simplified,
         }
         dest = OUTPUT_DIR / f"utm-timetable-{code}.json"
-        dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
+        write_json(dest, out)
         print(f"  -> {dest} ({len(simplified)} courses)")
 
     # Write a session index so the frontend knows which files exist
     index = [{"value": s["value"], "label": s["label"]} for s in sessions]
-    (OUTPUT_DIR / "utm-sessions.json").write_text(
-        json.dumps(index, ensure_ascii=False, separators=(",", ":"))
-    )
+    write_json(OUTPUT_DIR / "utm-sessions.json", index)
     print("\nDone. utm-sessions.json written.")
 
 

@@ -19,12 +19,13 @@ import re
 import sys
 from pathlib import Path
 
+# Make the shared ``common`` package importable when run as a script.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from common.paths import CALENDAR_DIR
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-
-SCRIPT_DIR   = Path(__file__).parent
-CALENDAR_DIR = SCRIPT_DIR.parent / "public" / "calendar"
 
 # Keywords that identify program-selection / program-admission events.
 # Matched case-insensitively against the unfolded SUMMARY value.
