@@ -6,11 +6,11 @@ const repoRoot = import.meta.dirname
 const webRoot = resolve(repoRoot, 'web')
 
 // Single-page app (vue-router). Web sources live in web/; scraper data lives
-// in data/ and is copied into the build output by copy-data.mjs (the "build"
-// npm script runs it right after `vite build`). The lone entry is web/index.html.
+// in data/. Setting publicDir to the data folder lets Vite serve and copy it
+// natively during dev and build.
 export default defineConfig({
   root: webRoot,
-  publicDir: false,
+  publicDir: resolve(repoRoot, 'data'),
   plugins: [vue()],
   build: {
     outDir: resolve(repoRoot, 'dist'),
