@@ -104,10 +104,9 @@
 
 /* ── Schedule Builder ── */
 #schedule-panel{gap:0}
-.sched-controls{width:520px;flex-shrink:0;border-right:1px solid var(--gray-200);overflow-y:auto;background:var(--gray-50);display:flex}
+.sched-controls{width:320px;flex-shrink:0;border-right:1px solid var(--gray-200);overflow-y:auto;background:var(--gray-50);display:flex;flex-direction:column}
 .sched-left,.sched-settings{padding:14px;min-width:0}
-.sched-left{width:300px;border-right:1px solid var(--gray-200)}
-.sched-settings{width:220px}
+.sched-settings{border-bottom:1px solid var(--gray-200)}
 .sched-controls h3{font-size:14px;font-weight:600;margin-bottom:10px}
 .sched-controls label{display:block;font-size:12px;font-weight:600;color:var(--gray-600);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.3px}
 .sched-empty{font-size:12px;color:var(--gray-600)}
@@ -143,6 +142,7 @@
 .course-block.conflict{border:2px solid var(--red);opacity:.85}
 .course-block.shared{outline:2px dashed rgba(255,255,255,.9);outline-offset:-3px}
 .course-block .cb-shared{margin-left:3px}
+.course-block .cb-full{margin-left:4px;font-size:9px;font-weight:700;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.85);color:#92400e;vertical-align:top}
 .no-data{color:var(--gray-600);font-size:13px;padding:20px;text-align:center}
 
 /* ── Prereq / Exclusion indicators ── */

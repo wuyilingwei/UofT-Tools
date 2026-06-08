@@ -9,7 +9,7 @@ const props = defineProps({
 const DAYS = [1, 2, 3, 4, 5]
 const grid = computed(() => buildGrid(props.results))
 
-const blockTitle = (b) => `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}\n${b.startLabel}–${b.endLabel}\n${b.room}`
+const blockTitle = (b) => `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}${b.full ? ' (full-session — runs both terms)' : ''}\n${b.startLabel}–${b.endLabel}\n${b.room}`
 </script>
 
 <template>
@@ -37,7 +37,7 @@ const blockTitle = (b) => `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}\n${b
             :style="{ top: b.top + 'px', height: b.height + 'px', background: b.color, color: '#fff' }"
             :title="blockTitle(b)"
           >
-            <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span></div>
+            <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span><span v-if="b.full" class="cb-full" title="Full-session course — runs in both terms">Y</span></div>
             <div class="cb-room">{{ b.sec }} {{ b.room }}</div>
           </div>
         </div>

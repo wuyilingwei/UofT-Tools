@@ -14,6 +14,47 @@ const DAYS = [
 
 <template>
   <aside class="sched-controls">
+    <section class="sched-settings">
+      <h3>Settings</h3>
+      <label>Scheduling Range</label>
+      <select v-model="state.scopeId" class="session-select" @change="onScopeChange">
+        <option v-if="!scopes.length" value="">No sessions available</option>
+        <option v-for="s in scopes" :key="s.id" :value="s.id">{{ s.label }}</option>
+      </select>
+
+      <label>Schedule Density</label>
+      <div class="pref-group">
+        <button class="pref-btn" :class="{ active: state.prefs.density === 'compact' }" @click="state.prefs.density = 'compact'">Compact</button>
+        <button class="pref-btn" :class="{ active: state.prefs.density === 'spread' }" @click="state.prefs.density = 'spread'">Spread out</button>
+      </div>
+
+      <label>Time of Day</label>
+      <div class="pref-group">
+        <button class="pref-btn" :class="{ active: state.prefs.time === 'any' }" @click="state.prefs.time = 'any'">Any</button>
+        <button class="pref-btn" :class="{ active: state.prefs.time === 'morning' }" @click="state.prefs.time = 'morning'">Morning</button>
+        <button class="pref-btn" :class="{ active: state.prefs.time === 'afternoon' }" @click="state.prefs.time = 'afternoon'">Afternoon</button>
+      </div>
+
+      <details class="day-pref">
+        <summary>Day Preferences</summary>
+        <label>Free Days (no classes)</label>
+        <div class="day-checks">
+          <label v-for="day in DAYS" :key="'free-' + day.d" class="day-check">
+            <input type="checkbox" :value="day.d" v-model="state.prefs.freeDays"> {{ day.label }}
+          </label>
+        </div>
+
+        <label>Busy Days (prefer classes here)</label>
+        <div class="day-checks">
+          <label v-for="day in DAYS" :key="'busy-' + day.d" class="day-check">
+            <input type="checkbox" :value="day.d" v-model="state.prefs.busyDays"> {{ day.label }}
+          </label>
+        </div>
+      </details>
+
+      <div class="sched-notice">{{ state.schedNotice }}</div>
+    </section>
+
     <section class="sched-left">
       <h3>Courses</h3>
       <label>Courses to Schedule</label>
@@ -67,44 +108,6 @@ const DAYS = [
         :remove="removeFriendCourse"
       />
     </section>
-
-    <section class="sched-settings">
-      <h3>Settings</h3>
-      <label>Scheduling Range</label>
-      <select v-model="state.scopeId" class="session-select" @change="onScopeChange">
-        <option v-if="!scopes.length" value="">No sessions available</option>
-        <option v-for="s in scopes" :key="s.id" :value="s.id">{{ s.label }}</option>
-      </select>
-
-      <label>Schedule Density</label>
-      <div class="pref-group">
-        <button class="pref-btn" :class="{ active: state.prefs.density === 'compact' }" @click="state.prefs.density = 'compact'">Compact</button>
-        <button class="pref-btn" :class="{ active: state.prefs.density === 'spread' }" @click="state.prefs.density = 'spread'">Spread out</button>
-      </div>
-
-      <label>Time of Day</label>
-      <div class="pref-group">
-        <button class="pref-btn" :class="{ active: state.prefs.time === 'any' }" @click="state.prefs.time = 'any'">Any</button>
-        <button class="pref-btn" :class="{ active: state.prefs.time === 'morning' }" @click="state.prefs.time = 'morning'">Morning</button>
-        <button class="pref-btn" :class="{ active: state.prefs.time === 'afternoon' }" @click="state.prefs.time = 'afternoon'">Afternoon</button>
-      </div>
-
-      <label>Free Days (no classes)</label>
-      <div class="day-checks">
-        <label v-for="day in DAYS" :key="'free-' + day.d" class="day-check">
-          <input type="checkbox" :value="day.d" v-model="state.prefs.freeDays"> {{ day.label }}
-        </label>
-      </div>
-
-      <label>Busy Days (prefer classes here)</label>
-      <div class="day-checks">
-        <label v-for="day in DAYS" :key="'busy-' + day.d" class="day-check">
-          <input type="checkbox" :value="day.d" v-model="state.prefs.busyDays"> {{ day.label }}
-        </label>
-      </div>
-
-      <div class="sched-notice">{{ state.schedNotice }}</div>
-    </section>
   </aside>
 </template>
 
@@ -125,4 +128,13 @@ const DAYS = [
   color: var(--gray-800) !important; margin-top: 14px;
 }
 .friend-hint { font-size: 11px; color: var(--gray-600); line-height: 1.5; margin: 4px 0; }
+.day-pref { margin-top: 12px; border-top: 1px solid var(--gray-200); padding-top: 8px; }
+.day-pref > summary {
+  cursor: pointer; list-style: none; font-size: 12px; font-weight: 600;
+  color: var(--gray-600); text-transform: uppercase; letter-spacing: .3px;
+  display: flex; align-items: center; gap: 6px; user-select: none;
+}
+.day-pref > summary::-webkit-details-marker { display: none; }
+.day-pref > summary::before { content: '▸'; font-size: 10px; color: var(--gray-400); transition: transform .15s; }
+.day-pref[open] > summary::before { transform: rotate(90deg); }
 </style>

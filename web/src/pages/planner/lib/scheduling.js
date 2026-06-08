@@ -21,9 +21,11 @@ function scopeLabel(session) {
   return session.label
 }
 
-// Group the flat session list into scheduling "scopes". A combined scope spans
-// its component timetable files plus the full-session timetable rendered beside them.
-//   [{ id, label, terms: [{value,label}], single? }]
+// Group the flat session list into scheduling "scopes". Only the two combined
+// ranges are exposed (Summer, Fall-Winter) — no duplicate single-session entries.
+// Each scope shows TWO term columns; the full-session (Y) timetable is merged
+// into both columns rather than rendered as a standalone third table.
+//   [{ id, label, terms: [{value,label}, {value,label}], full: {value,label}|null }]
 export function buildScopes(sessions) {
   const byValue = Object.fromEntries(sessions.map(s => [s.value, s]))
   const term = (v) => ({ value: v, label: shortTerm(byValue[v]?.label || v) })
@@ -32,17 +34,19 @@ export function buildScopes(sessions) {
     const v = s.value
     if (v.includes('-')) {
       const [a, b] = v.split('-')
-      if (byValue[a] && byValue[b]) scopes.push({ id: v, label: s.label, terms: [term(a), term(b), term(v)] })
+      if (byValue[a] && byValue[b]) scopes.push({ id: v, label: s.label, terms: [term(a), term(b)], full: term(v) })
     } else if (!/[FS]$/.test(v) && byValue[v + 'F'] && byValue[v + 'S']) {
-      scopes.push({ id: v, label: scopeLabel(s), terms: [term(v + 'F'), term(v + 'S'), term(v)] })
-    }
-  }
-  for (const s of sessions) {
-    if (!s.value.includes('-')) {
-      scopes.push({ id: 'one:' + s.value, label: s.label, terms: [term(s.value)], single: true })
+      scopes.push({ id: v, label: scopeLabel(s), terms: [term(v + 'F'), term(v + 'S')], full: term(v) })
     }
   }
   return scopes
+}
+
+// The badge-term list for availability: the two columns plus the full-session
+// term (kept as its own "Summer Full"/"Full Year" label so the Y semantics show).
+export function badgeTerms(scope) {
+  if (!scope) return []
+  return scope.full ? [...scope.terms, scope.full] : [...scope.terms]
 }
 
 export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
@@ -182,26 +186,39 @@ export function buildCourseAvailability(scopeTerms, timetables) {
   return map
 }
 
-export function analyzeCourseConflicts(scopeTerms, timetables, selectedCodes, prefs, candidateCodes = []) {
-  const terms = scopeTerms || []
+// Merge a column timetable with the full-session (Y) timetable so a candidate is
+// judged against everything that will actually appear in that column's grid.
+function mergedColumn(term, timetables, fullTT) {
+  const tt = timetables[term.value] || { courses: [], courseCount: 0 }
+  if (!fullTT) return tt
+  return {
+    courses: [...(tt.courses || []), ...(fullTT.courses || [])],
+    courseCount: (tt.courseCount || 0) + (fullTT.courseCount || 0),
+  }
+}
+
+export function analyzeCourseConflicts(scopeTerms, timetables, selectedCodes, prefs, candidateCodes = [], full = null) {
+  const columns = scopeTerms || []
+  const fullTT = full ? timetables[full.value] : null
+  const badge = full ? [...columns, full] : columns
   const selected = [...new Set(selectedCodes || [])]
   const candidates = [...new Set(candidateCodes.length ? candidateCodes : selected)]
-  const availability = buildCourseAvailability(terms, timetables)
-  const anyPublished = terms.some(term => (timetables[term.value]?.courseCount || 0) > 0)
+  const availability = buildCourseAvailability(badge, timetables)
+  const anyPublished = badge.some(term => (timetables[term.value]?.courseCount || 0) > 0)
   const hints = {}
 
   for (const code of candidates) {
     if (selected.includes(code)) continue
-    const offeredTerms = terms.filter(term => availability[code]?.includes(term.label))
-    if (!offeredTerms.length) {
+    if (!availability[code]?.length) {
       hints[code] = { conflict: true, reason: anyPublished ? 'Not offered in this range' : 'Timetable unpublished' }
       continue
     }
 
-    const fits = offeredTerms.some(term => {
-      const tt = timetables[term.value]
-      if (!tt || !(tt.courseCount || 0)) return false
+    const fits = columns.some(term => {
+      const tt = mergedColumn(term, timetables, fullTT)
+      if (!(tt.courseCount || 0)) return false
       const offered = new Set((tt.courses || []).map(c => c.code))
+      if (!offered.has(code)) return false
       const termCourses = [...selected, code].filter(c => offered.has(c))
       const results = buildSchedule(tt, termCourses, prefs)
       const candidate = results.find(r => r.code === code)
@@ -244,7 +261,7 @@ export function buildGrid(results) {
         if (height <= 0) continue
         dayBlocks[t.day].push({
           code: r.code, name: r.name, sec: sec.name, room: t.room,
-          top, height, color: r.color, conflict: r.conflict, shared: !!r.shared,
+          top, height, color: r.color, conflict: r.conflict, shared: !!r.shared, full: !!r.full,
           startLabel: msToLabel(t.startMs), endLabel: msToLabel(t.endMs),
         })
       }

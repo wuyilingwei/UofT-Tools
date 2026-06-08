@@ -2,7 +2,7 @@ import { reactive, computed, watch } from 'vue'
 import { buildCourseList, computeLegality, computeSuggestions } from './lib/courses.js'
 import {
   buildSchedule, buildScopes, buildPairSchedule,
-  buildCourseAvailability, analyzeCourseConflicts,
+  buildCourseAvailability, analyzeCourseConflicts, badgeTerms,
 } from './lib/scheduling.js'
 
 const BASE = ''
@@ -80,7 +80,7 @@ export const currentScope = computed(() => scopes.value.find(s => s.id === state
 // timetables are loaded). Lets the picker show availability before scheduling.
 export const availability = computed(() => {
   const scope = currentScope.value
-  return scope ? buildCourseAvailability(scope.terms, state.timetables) : {}
+  return scope ? buildCourseAvailability(badgeTerms(scope), state.timetables) : {}
 })
 
 export const scheduleSelection = computed(() => ({
@@ -100,6 +100,7 @@ export const courseConflictHints = computed(() => {
     state.scheduledCourses,
     prefsObj(),
     pendingCourses.value.map(c => c.code),
+    scope.full,
   )
 })
 export const courseAvailability = availability
@@ -244,7 +245,21 @@ async function ensureTimetable(value) {
 async function ensureScopeTimetables() {
   const scope = currentScope.value
   if (!scope) return
-  await Promise.all(scope.terms.map(t => ensureTimetable(t.value)))
+  const values = scope.terms.map(t => t.value)
+  if (scope.full) values.push(scope.full.value)
+  await Promise.all(values.map(ensureTimetable))
+}
+
+// A column's effective timetable = its own courses plus the full-session (Y)
+// courses, which are shown in BOTH columns rather than a standalone table.
+function mergedColumnTimetable(scope, term) {
+  const tt = state.timetables[term.value] || { courses: [], courseCount: 0 }
+  const fullTT = scope.full ? (state.timetables[scope.full.value] || { courses: [], courseCount: 0 }) : null
+  if (!fullTT) return tt
+  return {
+    courses: [...(tt.courses || []), ...(fullTT.courses || [])],
+    courseCount: (tt.courseCount || 0) + (fullTT.courseCount || 0),
+  }
 }
 
 export async function onScopeChange() {
@@ -265,12 +280,16 @@ function prefsObj() {
 }
 
 // Build the per-term schedule for a given course set against the loaded scope.
+// Each column merges in the full-session timetable, so a Y course appears in both.
 function scheduleScope(scope, courses) {
+  const fullTT = scope.full ? state.timetables[scope.full.value] : null
+  const fullCodes = new Set((fullTT?.courses || []).map(c => c.code))
   return scope.terms.map(term => {
-    const tt = state.timetables[term.value] || { courses: [], courseCount: 0 }
+    const tt = mergedColumnTimetable(scope, term)
     const offered = new Set((tt.courses || []).map(c => c.code))
     const inTerm = courses.filter(c => offered.has(c))
     const results = inTerm.length ? buildSchedule(tt, inTerm, prefsObj()) : []
+    results.forEach(r => { if (fullCodes.has(r.code)) r.full = true })
     return { value: term.value, label: term.label, results, published: (tt.courseCount || 0) > 0 }
   })
 }
@@ -349,7 +368,7 @@ function buildPairBoards(scope) {
   const you = []
   const friend = []
   for (const term of scope.terms) {
-    const tt = state.timetables[term.value] || { courses: [], courseCount: 0 }
+    const tt = mergedColumnTimetable(scope, term)
     const pair = buildPairSchedule(tt, shared, yourSolo, friendSolo, prefsObj())
     const published = (tt.courseCount || 0) > 0
     you.push({ value: term.value, label: term.label, results: pair.you, published })
