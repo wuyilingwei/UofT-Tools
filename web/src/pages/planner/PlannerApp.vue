@@ -40,16 +40,17 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
       <div class="main">
         <ProgramSelector />
 
+        <div v-if="state.selectedPrograms.length || state.extraCourses.length" class="view-toggle">
+          <button class="view-btn" :class="{ active: state.viewMode === 'list' }" @click="state.viewMode = 'list'">Course List</button>
+          <button class="view-btn" :class="{ active: state.viewMode === 'requirements' }" @click="state.viewMode = 'requirements'">Program Requirements</button>
+        </div>
+
         <div class="course-area">
           <div v-if="!state.selectedPrograms.length && !state.extraCourses.length" class="empty-state">
             <div style="font-size:36px">📚</div>
             <p>Select a subject from the left, then add a program — or add individual courses below.</p>
           </div>
           <template v-else>
-            <div class="view-toggle">
-              <button class="view-btn" :class="{ active: state.viewMode === 'list' }" @click="state.viewMode = 'list'">Course List</button>
-              <button class="view-btn" :class="{ active: state.viewMode === 'requirements' }" @click="state.viewMode = 'requirements'">Requirements</button>
-            </div>
             <CourseListView v-if="state.viewMode === 'list'" />
             <RequirementsView v-else />
           </template>

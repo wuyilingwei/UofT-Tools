@@ -43,7 +43,7 @@
 .section-item .s-hint{font-size:9px;color:var(--gray-600);float:right;opacity:.5}
 
 /* ── Main content ── */
-.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 
 /* ── Program selector ── */
 .prog-header{padding:14px 18px;border-bottom:1px solid var(--gray-200);background:#fff}
@@ -182,7 +182,7 @@
 .data-btn:hover{border-color:var(--teal);color:var(--teal)}
 
 /* ── Requirements view ── */
-.view-toggle{display:flex;gap:6px;margin-bottom:14px}
+.view-toggle{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid var(--gray-200);background:#fff;flex-shrink:0}
 .view-btn{padding:4px 10px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;font-size:12px;cursor:pointer;color:var(--gray-600);transition:.1s}
 .view-btn:hover{background:var(--gray-100)}
 .view-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}
@@ -211,3 +211,14 @@
 .req-pool summary .req-status{padding-top:0}
 .req-pool.met summary .req-status{color:var(--green)}
 .req-pool-items{padding-left:20px;margin-top:2px;border-left:2px solid var(--gray-100)}
+/* Faithful prose requirement blocks */
+.req-heading{font-size:12px;font-weight:700;color:var(--gray-700);margin:8px 0 3px}
+.req-note{font-size:12px;color:var(--gray-500);font-style:italic;padding:2px 0;line-height:1.5}
+.req-block{display:flex;align-items:flex-start;gap:5px;padding:2px 0;font-size:12px;line-height:1.6}
+.req-block.indent,.req-note.indent{padding-left:18px}
+.req-block .req-status{font-size:12px;min-width:14px;color:var(--gray-400);padding-top:2px}
+.req-block.met .req-status{color:var(--green)}
+.req-text{flex:1}
+.req-lead{font-weight:600;color:var(--gray-700)}
+.req-text .prc-wrap{white-space:nowrap}
+.req-none{font-size:12px;color:var(--gray-500);font-style:italic;padding:4px 0}

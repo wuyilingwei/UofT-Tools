@@ -42,16 +42,15 @@ export function buildCourseList(selectedPrograms, extraCourses = []) {
     }
     const rg = prog.requirementGroups
     if (rg) {
-      for (const kind of ['completion', 'enrolment']) {
-        for (const sec of (rg[kind]?.sections || [])) {
-          for (const groups of sec.groups) {
-            for (const alt of groups) {
-              for (const code of alt) {
-                if (courseMap.has(code)) {
-                  courseMap.get(code).reqLabels.add(prog.name.split(' - ')[0] + ' · ' + (sec.label || kind))
-                }
-              }
-            }
+      const short = prog.name.split(' - ')[0]
+      const clean = (s) => (s || '').replace(/:\s*$/, '').trim()
+      for (const [kind, kindLabel] of [['completion', 'Completion'], ['enrolment', 'Enrolment']]) {
+        let heading = ''
+        for (const b of (rg[kind]?.blocks || [])) {
+          if (b.heading) { heading = clean(b.lead || b.text); continue }
+          const label = clean(b.lead) || heading || kindLabel
+          for (const code of (b.codes || [])) {
+            if (courseMap.has(code)) courseMap.get(code).reqLabels.add(short + ' · ' + label)
           }
         }
       }
@@ -80,7 +79,7 @@ export function computeLegality(active) {
   const burden = s.length * 4 + m.length * 2 + mi.length * 1
 
   if (active.length > 3) messages.push(`⚠ ${active.length} active programs — UTM allows at most 3.`)
-  if (burden < 4) messages.push(`⚠ Program burden score is ${burden}/4 — add a specialist, major, or minors to meet the minimum.`)
+  if (burden < 4) messages.push('⚠ This selection isn\'t enough on its own — add a specialist, major, or more minors to form a complete degree.')
   if (!s.length && !m.length) messages.push("⚠ Minors alone won't satisfy a degree — add a specialist or major.")
   if (s.length > 1) messages.push(`⚠ ${s.length} specialists — UTM normally allows only 1.`)
 
@@ -102,10 +101,10 @@ export function computeLegality(active) {
 
   const nS = s.length, nM = m.length, nMi = mi.length
   let v = ''
-  if (nS === 1 && nM === 0 && nMi <= 2) v = `1 specialist${nMi ? ' + ' + nMi + ' minor(s)' : ''} (score: ${burden}) ✓`
-  else if (nS === 0 && nM === 1 && nMi <= 2) v = `1 major${nMi ? ' + ' + nMi + ' minor(s)' : ''} (score: ${burden}) ✓`
-  else if (nS === 0 && nM === 2 && nMi <= 1) v = `2 majors${nMi ? ' + ' + nMi + ' minor(s)' : ''} (score: ${burden}) ✓`
-  else if (burden >= 4) v = `Score: ${burden}/4 ✓`
+  if (nS === 1 && nM === 0 && nMi <= 2) v = `1 specialist${nMi ? ' + ' + nMi + ' minor(s)' : ''} ✓`
+  else if (nS === 0 && nM === 1 && nMi <= 2) v = `1 major${nMi ? ' + ' + nMi + ' minor(s)' : ''} ✓`
+  else if (nS === 0 && nM === 2 && nMi <= 1) v = `2 majors${nMi ? ' + ' + nMi + ' minor(s)' : ''} ✓`
+  else if (burden >= 4) v = 'Valid combination ✓'
   return { messages: [], success: v }
 }
 
@@ -171,4 +170,13 @@ export function buildReqLine(groups, isSatisfied) {
     label = `${alts.length} options${metCount ? ' · ' + metCount + ' completed' : ''}`
   }
   return { alts, anyMet, pool, label }
+}
+
+// Whether a requirement block's courses are satisfied. Returns null for blocks
+// with no course codes (headings / credit-only notes — no status icon shown).
+// "or" lines need any code; otherwise all codes must be satisfied.
+export function reqLineMet(block, isSatisfied) {
+  const codes = block.codes || []
+  if (!codes.length) return null
+  return / or /i.test(block.text || '') ? codes.some(isSatisfied) : codes.every(isSatisfied)
 }

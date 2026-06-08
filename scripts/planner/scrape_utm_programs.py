@@ -164,17 +164,18 @@ def _parse_paragraph_for_codes(el) -> list[list[str]]:
 
 
 def _parse_requirement_groups(soup) -> dict:
-    """Parse structured enrolment/completion requirements from Drupal fields.
+    """Parse enrolment/completion requirements into faithful ordered blocks.
 
-    Returns: {
-      "enrolment": {"sections": [{"label": str, "groups": [[[str]]]}]},
-      "completion": {"sections": [{"label": str, "groups": [[[str]]]}]}
-    }
-    Each section has a label (e.g. "First Year:") and groups.
-    groups is a list of requirement lines; each line is a list of alternatives.
-    [[[a,b],[c]]] means "you must take (a AND b) OR (c)".
+    Returns: { "enrolment": {"blocks": [...]}, "completion": {"blocks": [...]} }
+    Each block mirrors one <p>/<li> line from the calendar:
+      { "text": prose, "codes": [normalized course codes, in order],
+        "heading": bool, "indent": bool (came from <li>),
+        "lead": emphasized lead label or None, "note": bool }
+    This preserves credit amounts, <em>/<strong> year headings, and
+    constraint lines that reference courses without links
+    (e.g. "1.0 additional credit from the courses listed above").
     """
-    result = {"enrolment": {"sections": []}, "completion": {"sections": []}}
+    result = {"enrolment": {"blocks": []}, "completion": {"blocks": []}}
 
     for field_class, key in [
         ("field-enrolment-requirements", "enrolment"),
@@ -183,93 +184,78 @@ def _parse_requirement_groups(soup) -> dict:
         field = soup.find(class_=re.compile(field_class))
         if not field:
             continue
-        content_div = field.find(class_="field__item")
-        if not content_div:
-            continue
+        content_div = field.find(class_="field__item") or field
 
-        sections = []
-        current_label = ""
-        current_groups = []
-
-        for el in content_div.children:
-            if isinstance(el, NavigableString):
-                continue
-            tag = el.name.lower() if hasattr(el, 'name') else ''
-            txt = el.get_text(strip=True)
-
-            if tag in ('br', 'hr'):
-                continue
-
-            if tag in ('p', 'strong'):
-                strong = el.find('strong') if tag == 'p' else el
-                label = strong.get_text(strip=True) if strong and tag == 'p' else txt
-                has_course_links = bool(el.find_all('a')) and COURSE_RE.search(el.get_text(" "))
-
-                # Check if this is a notes section
-                if label and re.match(r'^(NOTES?|Notes?)\b', label):
-                    continue
-
-                # Does this paragraph have a <strong> that looks like a section heading?
-                is_heading = bool(
-                    label and tag == 'p' and strong
-                    and re.search(r'(Year|Credits|[0-9]+\.[0-9]+)', label)
-                )
-
-                if is_heading:
-                    # Flush previous section
-                    if current_label and current_groups:
-                        sections.append({"label": current_label, "groups": current_groups})
-                    current_label = label
-                    current_groups = []
-                    # Also extract course links from this heading paragraph
-                    if has_course_links:
-                        groups = _parse_paragraph_for_codes(el)
-                        if groups:
-                            current_groups.append(groups)
-
-                # <p> with course links but no strong heading — plain requirement line
-                elif tag == 'p' and (not strong) and has_course_links:
-                    groups = _parse_paragraph_for_codes(el)
-                    if groups:
-                        if not current_label:
-                            current_label = key.capitalize() + " Requirements"
-                        current_groups.append(groups)
-
-                # <p> with strong + course links that is NOT a year/credits heading
-                # (e.g. "Limited Enrolment" with embedded course references)
-                elif tag == 'p' and strong and has_course_links and not is_heading:
-                    groups = _parse_paragraph_for_codes(el)
-                    if groups:
-                        if current_label and current_groups:
-                            sections.append({"label": current_label, "groups": current_groups})
-                        current_label = label if label else key.capitalize() + " Requirements"
-                        current_groups = [groups]
-
-                # Plain <strong> or heading <p> without course links — just set label
-                elif label and not has_course_links:
-                    # Skip labels that are just conjunctions or noise
-                    if re.match(r'^(and|or|also|including|such as)$', label, re.IGNORECASE):
-                        continue
-                    if current_label and current_groups:
-                        sections.append({"label": current_label, "groups": current_groups})
-                    current_label = label
-                    current_groups = []
-
-            elif tag in ('ol', 'ul'):
-                if not current_label:
-                    current_label = key.capitalize() + " Requirements"
-                for li in el.find_all('li', recursive=False):
-                    item_groups = _parse_list_item(li)
-                    if item_groups:
-                        current_groups.append(item_groups)
-
-        # Flush final section
-        if current_label and current_groups:
-            sections.append({"label": current_label, "groups": current_groups})
-
-        result[key]["sections"] = sections
+        blocks = []
+        for el in content_div.find_all(["p", "li"], recursive=True):
+            block = _requirement_block(el)
+            if block:
+                blocks.append(block)
+        result[key]["blocks"] = blocks
 
     return result
+
+
+def _norm_ws(s: str) -> str:
+    return re.sub(r"\s+", " ", s or "").strip()
+
+
+def _ordered_codes(el) -> list[str]:
+    seen: list[str] = []
+    for raw in COURSE_RE.findall(el.get_text(" ")):
+        code = _normalize_course_code(raw)
+        if code not in seen:
+            seen.append(code)
+    return seen
+
+
+def _lead_label(el):
+    """Text of a leading <em>/<strong> label, if the line starts with one."""
+    for child in el.children:
+        if isinstance(child, NavigableString):
+            if child.strip() == "":
+                continue
+            return None
+        if hasattr(child, "name") and child.name:
+            if child.name in ("em", "strong", "b", "i"):
+                return _norm_ws(child.get_text(" ")) or None
+            return None
+    return None
+
+
+def _requirement_block(el):
+    """Turn a <p>/<li> into a faithful requirement block, or None to skip."""
+    # Skip container elements that wrap nested lines (avoid double counting).
+    if el.find(["p", "li"]):
+        return None
+    text = _norm_ws(el.get_text(" "))
+    if not text:
+        return None
+    if re.match(r"^(NOTES?)\b", text, re.IGNORECASE):
+        return None
+    # Canonicalize inline course-code spacing ("ENG 110 H 5" -> "ENG110H5").
+    text = COURSE_RE.sub(lambda m: _normalize_course_code(m.group(0)), text)
+    text = re.sub(r"\s+([.,;])", r"\1", text)  # tidy stray space before punctuation
+    codes = _ordered_codes(el)
+    lead = _lead_label(el)
+    indent = (el.name == "li")
+    is_heading = (
+        not codes
+        and len(text) <= 60
+        and bool(
+            lead
+            or text.endswith(":")
+            or re.search(r"\b(higher\s+years?|year)\b", text, re.IGNORECASE)
+        )
+    )
+    return {
+        "text": text,
+        "codes": codes,
+        "heading": is_heading,
+        "indent": indent,
+        "lead": lead,
+        "note": (not codes) and not is_heading,
+    }
 
 
 def _parse_list_item(li) -> list[list[str]]:

@@ -1,43 +1,34 @@
 <script setup>
 import { computed } from 'vue'
 import { activePrograms, getStatus, setCourseStatus, isSatisfied } from '../store.js'
-import { badgeClass, buildReqLine } from '../lib/courses.js'
+import { badgeClass, prereqTokens, reqLineMet } from '../lib/courses.js'
 
 const KINDS = [
   ['enrolment', 'Enrolment Requirements'],
   ['completion', 'Completion Requirements'],
 ]
 
-const programsModel = computed(() => activePrograms.value.map(prog => {
-  const rg = prog.requirementGroups
-  const hasReqs = rg && ((rg.enrolment?.sections?.length) || (rg.completion?.sections?.length))
-  const kinds = []
-  if (hasReqs) {
-    for (const [kind, label] of KINDS) {
-      const sections = rg[kind]?.sections || []
-      if (!sections.length) continue
-      kinds.push({
-        label,
-        sections: sections.map(sec => ({
-          label: sec.label,
-          lines: sec.groups.map(g => buildReqLine(g, isSatisfied)),
-        })),
-      })
-    }
-  }
-  return { prog, hasReqs, kinds }
-}))
+// Render a block's prose into clickable course tokens, with any leading
+// emphasized label (e.g. "First Year:") stripped so it can be shown bold.
+function tokenizeBlock(b) {
+  let text = b.text || ''
+  if (b.lead && text.startsWith(b.lead)) text = text.slice(b.lead.length).trimStart()
+  return prereqTokens(text, getStatus)
+}
 
-function altClass(alt) {
-  return alt.met ? 'met' : alt.done > 0 ? 'partial' : ''
-}
-function rcClass(code) {
-  const s = getStatus(code)
-  return s === 3 ? 'done' : s === 2 ? 's-progress' : s === 1 ? 's-planned' : ''
-}
-function rcNext(code) {
-  return getStatus(code) < 3 ? 3 : 0
-}
+const programsModel = computed(() => activePrograms.value.map(prog => {
+  const rg = prog.requirementGroups || {}
+  const kinds = []
+  for (const [key, label] of KINDS) {
+    const blocks = rg[key]?.blocks || []
+    if (!blocks.length) continue
+    kinds.push({
+      label,
+      blocks: blocks.map(b => ({ ...b, met: reqLineMet(b, isSatisfied), tokens: tokenizeBlock(b) })),
+    })
+  }
+  return { prog, hasReqs: kinds.length > 0, kinds }
+}))
 </script>
 
 <template>
@@ -52,43 +43,24 @@ function rcNext(code) {
           {{ entry.prog.name }} <span class="badge" :class="badgeClass(entry.prog.type)">{{ entry.prog.type }}</span>
         </div>
 
-        <div v-if="!entry.hasReqs" style="font-size:12px;color:var(--gray-500);font-style:italic;padding:4px 0">
-          No structured requirements available.
-        </div>
+        <div v-if="!entry.hasReqs" class="req-none">No structured requirements available.</div>
 
         <template v-else>
           <template v-for="kind in entry.kinds" :key="kind.label">
             <div class="req-kind-label">{{ kind.label }}</div>
-            <template v-for="(sec, si) in kind.sections" :key="si">
-              <div v-if="sec.label" class="req-sec-label">{{ sec.label }}</div>
 
-              <template v-for="(line, li) in sec.lines" :key="li">
-                <!-- Collapsible elective pool -->
-                <details v-if="line.pool" class="req-pool" :class="{ met: line.anyMet }">
-                  <summary>
-                    <span class="req-status">{{ line.anyMet ? '✓' : '○' }}</span>
-                    Elective — pick 1 <span style="font-size:11px;color:var(--gray-500)">{{ line.label }}</span>
-                  </summary>
-                  <div class="req-pool-items">
-                    <div v-for="(alt, ai) in line.alts" :key="ai" class="req-line" :class="{ met: alt.met }">
-                      <span class="req-status">{{ alt.met ? '✓' : '○' }}</span>
-                      <div class="req-alts">
-                        <span class="req-alt" :class="altClass(alt)">
-                          <template v-for="(c, ci) in alt.andGroup" :key="ci"><span v-if="ci > 0" class="req-plus">+</span><span class="rc" :class="rcClass(c)" title="Click to toggle" @click="setCourseStatus(c, rcNext(c))">{{ c }}</span> <a class="code-link" style="font-size:9px" :href="'https://utm.calendar.utoronto.ca/course/' + c.toLowerCase()" target="_blank" title="Open course page" @click="$event.stopPropagation()">↗</a></template>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </details>
+            <template v-for="(b, bi) in kind.blocks" :key="bi">
+              <!-- Standalone heading (e.g. "Higher Years:") -->
+              <div v-if="b.heading" class="req-heading">{{ b.lead || b.text }}</div>
 
-                <!-- Regular line (1–3 alternatives) -->
-                <div v-else class="req-line" :class="{ met: line.anyMet }">
-                  <span class="req-status">{{ line.anyMet ? '✓' : '○' }}</span>
-                  <div class="req-alts">
-                    <template v-for="(alt, ai) in line.alts" :key="ai"><span v-if="ai > 0" class="req-sep">or</span><span class="req-alt" :class="altClass(alt)"><template v-for="(c, ci) in alt.andGroup" :key="ci"><span v-if="ci > 0" class="req-plus">+</span><span class="rc" :class="rcClass(c)" title="Click to toggle" @click="setCourseStatus(c, rcNext(c))">{{ c }}</span> <a class="code-link" style="font-size:9px" :href="'https://utm.calendar.utoronto.ca/course/' + c.toLowerCase()" target="_blank" title="Open course page" @click="$event.stopPropagation()">↗</a></template></span></template>
-                  </div>
-                </div>
-              </template>
+              <!-- Credit-only note line (no course codes) -->
+              <div v-else-if="b.note" class="req-note" :class="{ indent: b.indent }">{{ b.text }}</div>
+
+              <!-- Requirement line with course codes -->
+              <div v-else class="req-block" :class="{ indent: b.indent, met: b.met }">
+                <span class="req-status">{{ b.met ? '✓' : '○' }}</span>
+                <span class="req-text"><span v-if="b.lead" class="req-lead">{{ b.lead }} </span><template v-for="(t, ti) in b.tokens" :key="ti"><span v-if="t.course" class="prc-wrap"><span class="rc" :class="t.cls" title="Click to toggle" @click="setCourseStatus(t.code, t.next)">{{ t.code }}</span><a class="code-link" style="font-size:9px" :href="'https://utm.calendar.utoronto.ca/course/' + t.code.toLowerCase()" target="_blank" title="Open course page" @click="$event.stopPropagation()">↗</a></span><template v-else>{{ t.text }}</template></template></span>
+              </div>
             </template>
           </template>
         </template>
