@@ -2,6 +2,7 @@
 import { state, legality, toggleProgram, toggleIntention, applyImported } from '../store.js'
 import { chipClass } from '../lib/courses.js'
 import { exportPlanner, importPlanner } from '../lib/dataio.js'
+import CoursePicker from './CoursePicker.vue'
 
 const shortName = (p) => p.name.split(' - ')[0] || p.name
 const chipTitle = (p) => p.intention ? 'Intention (planning)' : p.type + ' — ' + (p.code || '')
@@ -56,5 +57,7 @@ function onImport() {
       <button class="data-btn" @click="onExport">⬇ Export</button>
       <button class="data-btn" @click="onImport">⬆ Import</button>
     </div>
+
+    <CoursePicker />
   </div>
 </template>

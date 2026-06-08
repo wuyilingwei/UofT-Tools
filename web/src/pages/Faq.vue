@@ -1,7 +1,4 @@
 <script setup>
-import UoftHeader from '../../components/UoftHeader.vue'
-import UoftFooter from '../../components/UoftFooter.vue'
-
 // Each answer is trusted, author-authored HTML rendered with v-html.
 const sections = [
   {
@@ -30,7 +27,7 @@ const sections = [
     items: [
       {
         q: 'How do I subscribe to the academic calendar feeds?',
-        a: `<p>Go to the <a href="/calendar/">Calendar Feeds</a> page, pick your campus, and click <strong>Add to Calendar</strong>. The webcal link works with Google Calendar, Apple Calendar, Outlook, and most other apps. Your calendar will auto-update daily without any action on your part.</p>`,
+        a: `<p>Go to the <a href="/calendar">Calendar Feeds</a> page, pick your campus, and click <strong>Add to Calendar</strong>. The webcal link works with Google Calendar, Apple Calendar, Outlook, and most other apps. Your calendar will auto-update daily without any action on your part.</p>`,
       },
       {
         q: 'How often are the calendars updated?',
@@ -75,9 +72,8 @@ const sections = [
 </script>
 
 <template>
-  <UoftHeader title="Frequently Asked Questions" subtitle="UofT Tools — General Q&amp;A" />
-
-  <main>
+  <div class="container">
+    <h1 class="page-title">Frequently Asked Questions</h1>
     <div v-for="section in sections" :key="section.title" class="section">
       <p class="section-title">{{ section.title }}</p>
       <div v-for="item in section.items" :key="item.q" class="qa">
@@ -86,41 +82,28 @@ const sections = [
         <div class="qa-a" v-html="item.a"></div>
       </div>
     </div>
-  </main>
-
-  <UoftFooter>
-    Not affiliated with the University of Toronto &bull;
-    <a href="/statement.html">Statement</a> &bull;
-    <a href="https://github.com/wuyilingwei/UofT-Tools" target="_blank" rel="noopener noreferrer">View on GitHub</a>
-  </UoftFooter>
+  </div>
 </template>
 
 <style scoped>
-main { flex: 1; max-width: 780px; width: 100%; margin: 2.5rem auto; padding: 0 1.25rem; }
-
+.container { max-width: 780px; width: 100%; margin: 2.25rem auto; padding: 0 1.25rem; }
+.page-title { font-size: 1.5rem; font-weight: 700; color: var(--blue); margin-bottom: 1.5rem; }
 .section { margin-bottom: 2.5rem; }
 .section-title {
   font-size: .7rem; font-weight: 700; letter-spacing: .1em;
   text-transform: uppercase; color: var(--muted);
-  margin-bottom: 1rem; padding-bottom: .5rem;
-  border-bottom: 2px solid var(--blue);
+  margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 2px solid var(--blue);
 }
-
 .qa + .qa { margin-top: 1.25rem; }
 .qa-q {
   font-size: .95rem; font-weight: 700; color: var(--blue);
   margin-bottom: .4rem; display: flex; gap: .5rem; align-items: baseline;
 }
 .qa-q::before { content: "Q."; color: var(--gold); font-weight: 800; flex-shrink: 0; }
-
-.qa-a {
-  font-size: .88rem; color: var(--text); line-height: 1.7;
-  padding-left: 1.6rem;
-}
+.qa-a { font-size: .88rem; color: var(--text); line-height: 1.7; padding-left: 1.6rem; }
 :deep(.qa-a p + p) { margin-top: .6rem; }
 :deep(.qa-a a) { color: var(--blue); }
 :deep(.qa-a a:hover) { text-decoration: underline; }
-
 :deep(.callout) {
   border-left: 4px solid var(--gold); background: #fffbea;
   padding: .85rem 1rem; border-radius: 0 var(--radius) var(--radius) 0;

@@ -2,6 +2,40 @@
 
 const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#4f46e5', '#b45309', '#be123c', '#0369a1']
 
+// Short, grid-friendly term label from a full session label.
+export function shortTerm(label = '') {
+  if (/fall/i.test(label)) return 'Fall'
+  if (/winter/i.test(label)) return 'Winter'
+  if (/summer/i.test(label) && /first/i.test(label)) return 'Summer F'
+  if (/summer/i.test(label) && /second/i.test(label)) return 'Summer S'
+  if (/summer/i.test(label)) return 'Summer'
+  return label
+}
+
+// Group the flat session list into scheduling "scopes". A scope spans one or
+// two terms; dual-term scopes (Fall-Winter, Summer F+S) render side by side.
+//   [{ id, label, terms: [{value,label}], single? }]
+export function buildScopes(sessions) {
+  const byValue = Object.fromEntries(sessions.map(s => [s.value, s]))
+  const term = (v) => ({ value: v, label: shortTerm(byValue[v]?.label || v) })
+  const scopes = []
+  for (const s of sessions) {
+    const v = s.value
+    if (v.includes('-')) {
+      const [a, b] = v.split('-')
+      if (byValue[a] && byValue[b]) scopes.push({ id: v, label: s.label, terms: [term(a), term(b)] })
+    } else if (byValue[v + 'F'] && byValue[v + 'S']) {
+      scopes.push({ id: v, label: s.label, terms: [term(v + 'F'), term(v + 'S')] })
+    }
+  }
+  for (const s of sessions) {
+    if (!s.value.includes('-')) {
+      scopes.push({ id: 'one:' + s.value, label: s.label, terms: [term(s.value)], single: true })
+    }
+  }
+  return scopes
+}
+
 export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
   let score = 50
   for (const t of sec.times) {
@@ -46,7 +80,8 @@ export function markConflicts(results) {
 
 // Greedily pick best LEC + TUT/PRA per course given preferences.
 // prefs: { density, time, freeDays:number[], busyDays:number[] }
-export function buildSchedule(timetable, scheduledCourses, prefs) {
+// prePlaced: time blocks already occupied (e.g. shared courses when co-scheduling).
+export function buildSchedule(timetable, scheduledCourses, prefs, prePlaced = []) {
   const { density, time, freeDays, busyDays } = prefs
   const lookup = new Map()
   for (const c of timetable.courses) {
@@ -54,7 +89,7 @@ export function buildSchedule(timetable, scheduledCourses, prefs) {
   }
 
   const results = []
-  const placed = []
+  const placed = [...prePlaced]
   const colorMap = {}
   let colorIdx = 0
 
@@ -84,6 +119,45 @@ export function buildSchedule(timetable, scheduledCourses, prefs) {
 
   markConflicts(results)
   return results
+}
+
+// Time blocks occupied by a set of scheduled results.
+function placedTimes(results) {
+  const out = []
+  for (const r of results) {
+    for (const sec of (r.sections || [])) {
+      for (const t of sec.times) {
+        if (t.day) out.push({ code: r.code, day: t.day, startMs: t.startMs, endMs: t.endMs })
+      }
+    }
+  }
+  return out
+}
+
+// Shallow-clone results so per-person conflict flags stay independent while the
+// shared sections (and their times) remain identical.
+function cloneResults(results) {
+  return results.map(r => ({ ...r, conflict: false }))
+}
+
+// Co-schedule you + one friend: shared courses get the SAME LEC and PRA/TUT
+// section for both; each person's solo courses fit around the shared blocks.
+// Returns { you: results[], friend: results[] }.
+export function buildPairSchedule(timetable, shared, yourSolo, friendSolo, prefs) {
+  const offered = new Set((timetable.courses || []).map(c => c.code))
+  const sh = shared.filter(c => offered.has(c))
+  const ys = yourSolo.filter(c => offered.has(c))
+  const fs = friendSolo.filter(c => offered.has(c))
+
+  const sharedResults = buildSchedule(timetable, sh, prefs)
+  sharedResults.forEach(r => { r.shared = true })
+  const seed = placedTimes(sharedResults)
+
+  const you = [...cloneResults(sharedResults), ...buildSchedule(timetable, ys, prefs, seed)]
+  const friend = [...cloneResults(sharedResults), ...buildSchedule(timetable, fs, prefs, seed)]
+  markConflicts(you)
+  markConflicts(friend)
+  return { you, friend }
 }
 
 // ── Grid layout ──
@@ -116,7 +190,7 @@ export function buildGrid(results) {
         if (height <= 0) continue
         dayBlocks[t.day].push({
           code: r.code, name: r.name, sec: sec.name, room: t.room,
-          top, height, color: r.color, conflict: r.conflict,
+          top, height, color: r.color, conflict: r.conflict, shared: !!r.shared,
           startLabel: msToLabel(t.startMs), endLabel: msToLabel(t.endMs),
         })
       }

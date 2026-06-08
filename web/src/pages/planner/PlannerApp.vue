@@ -1,13 +1,14 @@
 <script setup>
 import { onMounted, onBeforeUnmount } from 'vue'
-import { state, syncScheduledCourses, closePopup } from './store.js'
+import './planner.css'
+import { state, init, syncScheduledCourses, closePopup } from './store.js'
 import ProgramSidebar from './components/ProgramSidebar.vue'
 import ProgramSelector from './components/ProgramSelector.vue'
 import CourseListView from './components/CourseListView.vue'
 import RequirementsView from './components/RequirementsView.vue'
 import SuggestionBar from './components/SuggestionBar.vue'
 import ScheduleBuilder from './components/ScheduleBuilder.vue'
-import ScheduleGrid from './components/ScheduleGrid.vue'
+import ScheduleBoard from './components/ScheduleBoard.vue'
 
 function switchTab(tab) {
   state.activeTab = tab
@@ -18,52 +19,52 @@ function switchTab(tab) {
 function onDocClick(e) {
   if (!e.target.closest('.sidebar')) closePopup()
 }
-onMounted(() => document.addEventListener('click', onDocClick))
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+  if (!state.programs) init()
+})
 onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <template>
-  <header class="site-header">
-    <h1>UTM Course Planner</h1>
-    <a href="/">← UofT Tools</a>
-  </header>
-
-  <div class="tabs">
-    <button class="tab-btn" :class="{ active: state.activeTab === 'planner' }" @click="switchTab('planner')">Program Planner</button>
-    <button class="tab-btn" :class="{ active: state.activeTab === 'schedule' }" @click="switchTab('schedule')">Schedule Builder</button>
-  </div>
-
-  <!-- Program Planner -->
-  <div class="tab-panel" :class="{ active: state.activeTab === 'planner' }">
-    <ProgramSidebar />
-
-    <div class="main">
-      <ProgramSelector />
-
-      <div class="course-area">
-        <div v-if="!state.selectedPrograms.length" class="empty-state">
-          <div style="font-size:36px">📚</div>
-          <p>Select a subject from the left, then add a program to see course requirements.</p>
-        </div>
-        <template v-else>
-          <div class="view-toggle">
-            <button class="view-btn" :class="{ active: state.viewMode === 'list' }" @click="state.viewMode = 'list'">Course List</button>
-            <button class="view-btn" :class="{ active: state.viewMode === 'requirements' }" @click="state.viewMode = 'requirements'">Requirements</button>
-          </div>
-          <CourseListView v-if="state.viewMode === 'list'" />
-          <RequirementsView v-else />
-        </template>
-      </div>
-
-      <SuggestionBar />
+  <div class="planner-scope">
+    <div class="tabs">
+      <button class="tab-btn" :class="{ active: state.activeTab === 'planner' }" @click="switchTab('planner')">Program Planner</button>
+      <button class="tab-btn" :class="{ active: state.activeTab === 'schedule' }" @click="switchTab('schedule')">Schedule Builder</button>
     </div>
-  </div>
 
-  <!-- Schedule Builder -->
-  <div id="schedule-panel" class="tab-panel" :class="{ active: state.activeTab === 'schedule' }">
-    <ScheduleBuilder />
-    <div class="grid-area">
-      <ScheduleGrid />
+    <!-- Program Planner -->
+    <div class="tab-panel" :class="{ active: state.activeTab === 'planner' }">
+      <ProgramSidebar />
+
+      <div class="main">
+        <ProgramSelector />
+
+        <div class="course-area">
+          <div v-if="!state.selectedPrograms.length && !state.extraCourses.length" class="empty-state">
+            <div style="font-size:36px">📚</div>
+            <p>Select a subject from the left, then add a program — or add individual courses below.</p>
+          </div>
+          <template v-else>
+            <div class="view-toggle">
+              <button class="view-btn" :class="{ active: state.viewMode === 'list' }" @click="state.viewMode = 'list'">Course List</button>
+              <button class="view-btn" :class="{ active: state.viewMode === 'requirements' }" @click="state.viewMode = 'requirements'">Requirements</button>
+            </div>
+            <CourseListView v-if="state.viewMode === 'list'" />
+            <RequirementsView v-else />
+          </template>
+        </div>
+
+        <SuggestionBar />
+      </div>
+    </div>
+
+    <!-- Schedule Builder -->
+    <div id="schedule-panel" class="tab-panel" :class="{ active: state.activeTab === 'schedule' }">
+      <ScheduleBuilder />
+      <div class="grid-area">
+        <ScheduleBoard />
+      </div>
     </div>
   </div>
 </template>

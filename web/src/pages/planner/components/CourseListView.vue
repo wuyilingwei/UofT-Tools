@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { state, courseList, getStatus, setCourseStatus, isSatisfied } from '../store.js'
+import { state, courseList, getStatus, setCourseStatus, isSatisfied, removeExtraCourse } from '../store.js'
 import { badgeClass, courseYear, prereqTokens } from '../lib/courses.js'
 
 const ROW_CLS = ['', 's-planned', 's-progress', 's-done']
@@ -28,6 +28,7 @@ const rows = computed(() => courseList.value.map(c => {
     year: courseYear(c.code),
     meta,
     exclConflicts,
+    added: !!c.added,
     prereq: meta ? prereqInfo(meta) : null,
   }
 }))
@@ -78,7 +79,8 @@ const stats = computed(() => {
           </td>
           <td>
             <a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank" title="Open course page">{{ row.code }}</a><span
-              v-if="row.exclConflicts.length" class="excl-flag" :title="'Exclusion: ' + row.exclConflicts.join(', ')">⊘</span>
+              v-if="row.exclConflicts.length" class="excl-flag" :title="'Exclusion: ' + row.exclConflicts.join(', ')">⊘</span><span
+              v-if="row.added" class="added-x" title="Remove added course" @click="removeExtraCourse(row.code)">×</span>
           </td>
           <td>
             <div class="programs-tags">

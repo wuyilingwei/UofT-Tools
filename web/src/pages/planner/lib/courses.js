@@ -26,8 +26,10 @@ export function chipClass(type) {
 }
 
 // Build the flat, de-duplicated course list for the selected programs.
-// Each entry: { code, programs:[{name,type,intention}], reqLabels:Set<string> }
-export function buildCourseList(selectedPrograms) {
+// Build the flat, de-duplicated course list for the selected programs plus any
+// individually-added courses (extraCourses = codes added outside a program).
+// Each entry: { code, programs:[{name,type,intention,added?}], reqLabels:Set, added? }
+export function buildCourseList(selectedPrograms, extraCourses = []) {
   const courseMap = new Map()
   for (const prog of selectedPrograms) {
     for (const code of (prog.courses || [])) {
@@ -53,6 +55,13 @@ export function buildCourseList(selectedPrograms) {
           }
         }
       }
+    }
+  }
+  for (const code of extraCourses) {
+    if (!courseMap.has(code)) {
+      courseMap.set(code, { code, programs: [{ name: 'Added', type: '', added: true }], reqLabels: new Set(), added: true })
+    } else {
+      courseMap.get(code).added = true
     }
   }
   return [...courseMap.values()].sort((a, b) => a.code.localeCompare(b.code))

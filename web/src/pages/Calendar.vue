@@ -1,17 +1,15 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import UoftFooter from '../../components/UoftFooter.vue'
 
 const FALLBACK_BASE = 'https://uoft.wuyilingwei.com/calendar/'
 
 // Build webcal/https URLs from the current origin so the page works on any host
-// (GitHub Pages, Cloudflare Pages, custom domain, localhost, etc.).
+// (GitHub Pages, Cloudflare, custom domain, localhost, etc.).
 function resolveBase() {
   try {
-    const base = window.location.origin +
-      window.location.pathname.replace(/\/[^/]*$/, '/')
+    const base = window.location.origin + '/calendar/'
     if (!/^https?:\/\//.test(base)) return FALLBACK_BASE
-    return base.endsWith('/') ? base : base + '/'
+    return base
   } catch (e) {
     return FALLBACK_BASE
   }
@@ -66,15 +64,10 @@ function copyUrl(text, toastId) {
 </script>
 
 <template>
-  <header class="bar">
-    <div>
-      <h1>U of T Important Dates</h1>
-      <p>University of Toronto &mdash; Academic Calendar Feeds</p>
-    </div>
-    <a class="back-link" href="/">&#8592; UofT Tools</a>
-  </header>
+  <div class="container">
+    <h1 class="page-title">U of T Important Dates</h1>
+    <p class="page-sub">University of Toronto &mdash; Academic Calendar Feeds</p>
 
-  <main>
     <!-- Per-campus subscribe + download -->
     <div v-for="c in campuses" :key="c.key" class="campus-section">
       <div class="campus-header">
@@ -98,7 +91,7 @@ function copyUrl(text, toastId) {
           <h3>&#8659; Download Snapshot</h3>
           <p>Import once. Won&rsquo;t auto-update.</p>
           <div class="actions">
-            <a class="btn btn-primary" :href="c.file" :download="c.downloadName">Download {{ c.file }}</a>
+            <a class="btn btn-primary" :href="'/calendar/' + c.file" :download="c.downloadName">Download {{ c.file }}</a>
             <a class="btn btn-outline" :href="c.official" target="_blank" rel="noopener noreferrer">Official Page &#8599;</a>
           </div>
         </div>
@@ -142,33 +135,20 @@ function copyUrl(text, toastId) {
         <li>Calendar apps that support webcal/CalDAV poll the URL and pull in any changes.</li>
       </ul>
     </div>
-  </main>
 
-  <UoftFooter>
-    Sources:
-    <a href="https://www.utm.utoronto.ca/registrar/dates" target="_blank" rel="noopener noreferrer">UTM</a> &bull;
-    <a href="https://www.utsc.utoronto.ca/registrar/academic-dates" target="_blank" rel="noopener noreferrer">UTSC</a> &bull;
-    <a href="https://www.artsci.utoronto.ca/current/dates-deadlines/academic-dates" target="_blank" rel="noopener noreferrer">ArtsCI</a> &bull;
-    <a href="/faq.html">FAQ</a> &bull;
-    <a href="https://github.com/wuyilingwei/UofT-Tools" target="_blank" rel="noopener noreferrer">View on GitHub</a>
-  </UoftFooter>
+    <p class="sources">
+      Sources:
+      <a href="https://www.utm.utoronto.ca/registrar/dates" target="_blank" rel="noopener noreferrer">UTM</a> &bull;
+      <a href="https://www.utsc.utoronto.ca/registrar/academic-dates" target="_blank" rel="noopener noreferrer">UTSC</a> &bull;
+      <a href="https://www.artsci.utoronto.ca/current/dates-deadlines/academic-dates" target="_blank" rel="noopener noreferrer">ArtsCI</a>
+    </p>
+  </div>
 </template>
 
 <style scoped>
-.bar {
-  background: var(--blue); color: #fff; padding: 1.25rem 1.5rem;
-  display: flex; align-items: center; gap: 1rem;
-}
-.bar h1 { font-size: 1.2rem; font-weight: 600; }
-.bar p { font-size: .8rem; opacity: .75; margin-top: .1rem; }
-.back-link {
-  margin-left: auto; font-size: .8rem; color: rgba(255, 255, 255, .75);
-  text-decoration: none; display: flex; align-items: center; gap: .3rem;
-  white-space: nowrap;
-}
-.back-link:hover { color: #fff; }
-
-main { flex: 1; max-width: 780px; width: 100%; margin: 2.5rem auto; padding: 0 1.25rem; }
+.container { max-width: 780px; width: 100%; margin: 2.25rem auto; padding: 0 1.25rem; }
+.page-title { font-size: 1.5rem; font-weight: 700; color: var(--blue); }
+.page-sub { font-size: .85rem; color: var(--muted); margin: .2rem 0 1.75rem; }
 
 .campus-section { margin-bottom: 2.5rem; }
 .campus-header {
@@ -234,4 +214,7 @@ main { flex: 1; max-width: 780px; width: 100%; margin: 2.5rem auto; padding: 0 1
   font-size: .85rem; font-weight: 700; color: var(--blue);
   margin-bottom: .6rem; display: flex; align-items: center; gap: .5rem;
 }
+.sources { text-align: center; font-size: .78rem; color: var(--muted); margin-top: 1.5rem; }
+.sources a { color: var(--blue); text-decoration: none; }
+.sources a:hover { text-decoration: underline; }
 </style>

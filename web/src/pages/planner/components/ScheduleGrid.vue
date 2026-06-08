@@ -1,19 +1,20 @@
 <script setup>
 import { computed } from 'vue'
-import { state } from '../store.js'
 import { buildGrid, DAY_LABELS, HOUR_PX, msToLabel } from '../lib/scheduling.js'
 
-const DAYS = [1, 2, 3, 4, 5]
-const grid = computed(() => buildGrid(state.scheduleResult))
+const props = defineProps({
+  results: { type: Array, default: () => [] },
+})
 
-const blockTitle = (b) => `${b.code} ${b.sec}\n${b.startLabel}–${b.endLabel}\n${b.room}`
+const DAYS = [1, 2, 3, 4, 5]
+const grid = computed(() => buildGrid(props.results))
+
+const blockTitle = (b) => `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}\n${b.startLabel}–${b.endLabel}\n${b.room}`
 </script>
 
 <template>
   <div class="grid-wrap">
-    <div v-if="!state.scheduleResult.length" class="no-data">
-      Select a session and courses, then click Generate Schedule.
-    </div>
+    <div v-if="!results.length" class="no-data">No courses scheduled for this term.</div>
 
     <template v-else>
       <div class="grid-header">
@@ -32,11 +33,11 @@ const blockTitle = (b) => `${b.code} ${b.sec}\n${b.startLabel}–${b.endLabel}\n
             v-for="(b, i) in grid.dayBlocks[d]"
             :key="i"
             class="course-block"
-            :class="{ conflict: b.conflict }"
+            :class="{ conflict: b.conflict, shared: b.shared }"
             :style="{ top: b.top + 'px', height: b.height + 'px', background: b.color, color: '#fff' }"
             :title="blockTitle(b)"
           >
-            <div class="cb-code">{{ b.code }}</div>
+            <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span></div>
             <div class="cb-room">{{ b.sec }} {{ b.room }}</div>
           </div>
         </div>

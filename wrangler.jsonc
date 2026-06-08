@@ -15,7 +15,11 @@
     "command": "npm run build"
   },
   "assets": {
-    "directory": "dist"
+    "directory": "dist",
+    // SPA: serve index.html for any path that isn't a real file, so vue-router
+    // client routes (/planner, /calendar, …) work on direct load/refresh.
+    // Real assets (.ics, .json, /assets/*) are still served directly.
+    "not_found_handling": "single-page-application"
   },
   "compatibility_flags": [
     "nodejs_compat"
