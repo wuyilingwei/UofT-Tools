@@ -225,7 +225,7 @@ export function analyzeCourseConflicts(scopeTerms, timetables, selectedCodes, pr
       return candidate && !candidate.missing && !results.some(r => r.conflict)
     })
 
-    if (!fits) hints[code] = { conflict: true, reason: 'Always conflicts' }
+    if (!fits) hints[code] = { conflict: true, reason: 'Conflict Found' }
   }
 
   return hints

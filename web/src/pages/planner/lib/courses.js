@@ -13,6 +13,22 @@ export function courseCredit(code) {
   return /Y\d$/i.test(code || '') ? 1.0 : 0.5
 }
 
+// Compact marker for a requirement section: a year (Y1/Y2/Y3/Y3+/Y4) or null.
+export function yearMarker(text) {
+  const t = (text || '').toLowerCase()
+  if (/higher\s+year/.test(t)) return 'Y3+'
+  if (/(first|1st)\s+year|year\s*1\b/.test(t)) return 'Y1'
+  if (/(second|2nd)\s+year|year\s*2\b/.test(t)) return 'Y2'
+  if (/(third|3rd)\s+year|year\s*3\b/.test(t)) return 'Y3'
+  if (/(fourth|4th)\s+year|year\s*4\b/.test(t)) return 'Y4'
+  return null
+}
+
+const MARKER_ORDER = { Y1: 1, Y2: 2, Y3: 3, 'Y3+': 3.5, Y4: 4, Enrol: 9 }
+function orderMarkers(arr) {
+  return [...arr].sort((a, b) => (MARKER_ORDER[a] || 5) - (MARKER_ORDER[b] || 5))
+}
+
 export function badgeClass(type) {
   if (!type) return ''
   const t = type.toLowerCase()
@@ -48,16 +64,25 @@ export function buildCourseList(selectedPrograms, extraCourses = []) {
     const rg = prog.requirementGroups
     if (rg) {
       const short = prog.name.split(' - ')[0]
-      const clean = (s) => (s || '').replace(/:\s*$/, '').trim()
-      for (const [kind, kindLabel] of [['completion', 'Completion'], ['enrolment', 'Enrolment']]) {
+      // Collect compact markers (Y1/Y2/Y3+/Enrol) per course, then merge into a
+      // single "Program · Y1, Enrol" tag instead of one tag per requirement line.
+      const markersByCode = new Map()
+      const note = (code, marker) => {
+        if (!courseMap.has(code)) return
+        if (!markersByCode.has(code)) markersByCode.set(code, new Set())
+        if (marker) markersByCode.get(code).add(marker)
+      }
+      for (const kind of ['completion', 'enrolment']) {
         let heading = ''
         for (const b of (rg[kind]?.blocks || [])) {
-          if (b.heading) { heading = clean(b.lead || b.text); continue }
-          const label = clean(b.lead) || heading || kindLabel
-          for (const code of (b.codes || [])) {
-            if (courseMap.has(code)) courseMap.get(code).reqLabels.add(short + ' · ' + label)
-          }
+          if (b.heading) { heading = b.lead || b.text; continue }
+          const marker = kind === 'enrolment' ? 'Enrol' : yearMarker(b.lead || heading)
+          for (const code of (b.codes || [])) note(code, marker)
         }
+      }
+      for (const [code, markers] of markersByCode) {
+        const ms = orderMarkers(markers)
+        courseMap.get(code).reqLabels.add(ms.length ? short + ' · ' + ms.join(', ') : short)
       }
     }
   }
