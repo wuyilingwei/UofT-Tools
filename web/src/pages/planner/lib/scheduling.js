@@ -438,6 +438,7 @@ export function buildGrid(results) {
         if (height <= 0) continue
         dayBlocks[t.day].push({
           code: r.code, name: r.name, sec: sec.name, room: t.room,
+          instructors: sec.instructors || [],
           top, height, color: r.color,
           conflict: !!(r.conflictTimes && r.conflictTimes.has(timeKey(r.code, t))),
           shared: !!r.shared, full: !!r.full,

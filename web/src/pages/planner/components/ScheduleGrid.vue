@@ -9,7 +9,10 @@ const props = defineProps({
 const DAYS = [1, 2, 3, 4, 5]
 const grid = computed(() => buildGrid(props.results))
 
-const blockTitle = (b) => `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}${b.full ? ' (full-session — runs both terms)' : ''}\n${b.startLabel}–${b.endLabel}\n${b.room}`
+const blockTitle = (b) => {
+  const inst = (b.instructors || []).map(i => `${i.firstName} ${i.lastName}`).join(', ')
+  return `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}${b.full ? ' (full-session — runs both terms)' : ''}\n${b.startLabel}–${b.endLabel}\n${b.room}${inst ? '\n' + inst : ''}`
+}
 </script>
 
 <template>

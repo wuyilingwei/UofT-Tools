@@ -80,7 +80,8 @@ const stats = computed(() => {
             </div>
           </td>
           <td class="c-course">
-            <a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank" title="Open course page">{{ row.code }}</a><span
+            <span class="c-name-wrap"><a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank" title="Open course page">{{ row.code }}</a><span
+              v-if="row.meta" class="course-name-preview"><span class="cn-name">{{ row.meta.name }}</span><span v-if="row.meta.description" class="cn-desc">{{ row.meta.description }}</span></span></span><span
               v-if="row.exclConflicts.length" class="excl-flag" tabindex="0" role="note"
               :aria-label="'Exclusion conflict — you can only count one of ' + row.code + ' and ' + row.exclConflicts.join(', ')"
             >⊘<span class="excl-tip">Exclusion: you may only count one of <b>{{ row.code }}</b> and {{ row.exclConflicts.join(', ') }} toward your programs.</span></span>

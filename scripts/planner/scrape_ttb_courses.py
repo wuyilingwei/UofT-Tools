@@ -88,11 +88,17 @@ def simplify_course(raw: dict) -> dict:
                 "endMs":     end.get("millisofday"),
                 "room":      (bld.get("buildingCode", "") + " " + bld.get("buildingRoomNumber", "")).strip(),
             })
+        instructors_raw = sec.get("instructors", []) or []
+        instructors = [
+            {"firstName": i.get("firstName", ""), "lastName": i.get("lastName", "")}
+            for i in instructors_raw
+        ]
         sections.append({
             "name":          sec.get("name"),
             "type":          sec.get("teachMethod"),  # LEC, TUT, PRA
             "sectionNumber": sec.get("sectionNumber"),
             "times":         times,
+            "instructors":   instructors,
         })
     return {
         "code":        raw["code"],

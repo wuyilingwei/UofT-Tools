@@ -77,8 +77,12 @@ def fetch_course(code: str) -> dict | None:
     if not article:
         return None
 
-    title_el = soup.find("h1") or soup.find("title")
-    name     = title_el.get_text(strip=True).split("|")[0].strip() if title_el else code
+    # The page has two <h1> tags — site-header "Academic Calendar" comes first.
+    # The actual course title is "CODE • Name" inside h1.page-title.
+    title_el = soup.select_one("h1.page-title") or soup.find("h1") or soup.find("title")
+    raw_name = title_el.get_text(strip=True).split("|")[0].strip() if title_el else code
+    # Strip the leading "CODE • " prefix so we keep just the course name.
+    name = raw_name.split("•", 1)[1].strip() if "•" in raw_name else raw_name
 
     desc   = field_text(article, "field-desc")
     prereq_codes = field_codes(article, "field-prerequisite")
