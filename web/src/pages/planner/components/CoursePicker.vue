@@ -4,7 +4,7 @@ import { state, addExtraCourse, removeExtraCourse, isValidCourseCode, getStatus,
 
 const props = defineProps({
   label: { type: String, default: 'Add a course' },
-  placeholder: { type: String, default: 'e.g. CSC263' },
+  placeholder: { type: String, default: 'type course here' },
   // Optional overrides; default to the planner's extraCourses list.
   items: { type: Array, default: null },
   add: { type: Function, default: null },
@@ -89,7 +89,7 @@ function add(code) {
 .cp-row { display: flex; gap: 8px; align-items: flex-start; }
 .cp-input-wrap { position: relative; flex: 0 0 auto; }
 .cp-input {
-  width: 11ch; padding: 6px 8px; border: 1px solid var(--gray-200);
+  width: 16ch; padding: 6px 8px; border: 1px solid var(--gray-200);
   border-radius: var(--radius); font-size: 13px; outline: none;
 }
 .cp-input:focus { border-color: var(--teal); }

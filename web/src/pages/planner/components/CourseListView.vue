@@ -4,6 +4,8 @@ import { state, courseList, getStatus, setCourseStatus, isSatisfied, removeExtra
 import { badgeClass, courseYear, prereqTokens } from '../lib/courses.js'
 
 const ROW_CLS = ['', 's-planned', 's-progress', 's-done']
+const STATUS_LABELS = ['None', 'Plan', 'Taking', 'Done']
+const cycleStatus = (code) => setCourseStatus(code, (getStatus(code) + 1) % 4)
 
 const allSelectedCodes = computed(() => new Set(courseList.value.map(c => c.code)))
 
@@ -70,12 +72,12 @@ const stats = computed(() => {
       <tbody>
         <tr v-for="row in rows" :key="row.code" :class="row.rowCls">
           <td>
-            <div class="sp">
-              <button class="sp-b" :class="{ 's-none': getStatus(row.code) === 0 }" @click="setCourseStatus(row.code, 0)">None</button>
-              <button class="sp-b" :class="{ 's-planned': getStatus(row.code) === 1 }" @click="setCourseStatus(row.code, 1)">Plan</button>
-              <button class="sp-b" :class="{ 's-progress': getStatus(row.code) === 2 }" @click="setCourseStatus(row.code, 2)">Taking</button>
-              <button class="sp-b" :class="{ 's-done': getStatus(row.code) === 3 }" @click="setCourseStatus(row.code, 3)">Done</button>
-            </div>
+            <button
+              class="sp-cycle"
+              :class="ROW_CLS[getStatus(row.code)]"
+              title="Click to cycle: None → Plan → Taking → Done"
+              @click="cycleStatus(row.code)"
+            >{{ STATUS_LABELS[getStatus(row.code)] }}</button>
           </td>
           <td>
             <a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank" title="Open course page">{{ row.code }}</a><span

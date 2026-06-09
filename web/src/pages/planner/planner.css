@@ -165,14 +165,12 @@
 .empty-state p{margin-top:6px;font-size:13px}
 .notice{background:#fff3cd;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:12px;color:#856404;margin-bottom:10px}
 
-/* ── Course status picker ── */
-.sp{display:inline-flex;border:1px solid var(--gray-200);border-radius:5px;overflow:hidden}
-.sp-b{padding:2px 6px;border:none;border-right:1px solid var(--gray-200);background:#fff;font-size:11px;cursor:pointer;color:var(--gray-500);transition:.1s;white-space:nowrap}
-.sp-b:last-child{border-right:none}
-.sp-b:hover{background:var(--gray-100)}
-.sp-b.s-planned{background:#dbeafe;color:#1d4ed8;font-weight:600}
-.sp-b.s-progress{background:#fef9c3;color:#854d0e;font-weight:600}
-.sp-b.s-done{background:#dcfce7;color:#15803d;font-weight:600}
+/* ── Course status picker (single 4-state cycle button) ── */
+.sp-cycle{min-width:56px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:5px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray-500);transition:.1s;white-space:nowrap;text-align:center;font-weight:600}
+.sp-cycle:hover{background:var(--gray-100)}
+.sp-cycle.s-planned{background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe}
+.sp-cycle.s-progress{background:#fef9c3;color:#854d0e;border-color:#fde68a}
+.sp-cycle.s-done{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
 .course-table tr.s-done td{opacity:.45}
 .course-table tr.s-progress td{background:#fffbeb}
 .course-table tr.s-planned td{background:#eff6ff}
