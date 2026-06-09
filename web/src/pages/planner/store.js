@@ -44,7 +44,7 @@ export const state = reactive({
   extraCourses: [],              // course codes added outside any program (6.1)
   courseStatus: loadCourseStatus(),  // { code: 0|1|2|3 }
 
-  prefs: { density: 'compact', time: 'any', freeDays: [], busyDays: [] },
+  prefs: { density: 'compact', time: 'any', freeDays: [], busyDays: [], zzOverlap: true, zzWithReg: false },
   scopeId: '',                 // selected scheduling scope (see lib/scheduling buildScopes)
   timetables: {},              // sessionValue → timetable data (lazy cache)
   scheduled: {},               // code → [termValue,…] : which segment(s) to schedule per course
@@ -352,6 +352,8 @@ function prefsObj() {
     time: state.prefs.time,
     freeDays: state.prefs.freeDays.map(Number),
     busyDays: state.prefs.busyDays.map(Number),
+    zzOverlap: state.prefs.zzOverlap,
+    zzWithReg: state.prefs.zzWithReg,
   }
 }
 

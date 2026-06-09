@@ -69,13 +69,18 @@ export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
   return score
 }
 
-export function markConflicts(results) {
+// "ZZ" is the room code for exam/test-reserved blocks. These may be allowed to
+// overlap: opts.zzOverlap (ZZ↔ZZ, default allowed) and opts.zzWithReg
+// (ZZ↔regular class, default NOT allowed → still a conflict).
+export function markConflicts(results, opts = {}) {
+  const zzOverlap = opts.zzOverlap !== false
+  const zzWithReg = opts.zzWithReg === true
   const allTimes = []
   for (const r of results) {
     for (const sec of (r.sections || [])) {
       for (const t of sec.times) {
         if (!t.day) continue
-        allTimes.push({ result: r, day: t.day, startMs: t.startMs, endMs: t.endMs })
+        allTimes.push({ result: r, day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ' })
       }
     }
   }
@@ -83,10 +88,11 @@ export function markConflicts(results) {
     for (let j = i + 1; j < allTimes.length; j++) {
       const a = allTimes[i], b = allTimes[j]
       if (a.result === b.result) continue
-      if (a.day === b.day && a.startMs < b.endMs && a.endMs > b.startMs) {
-        a.result.conflict = true
-        b.result.conflict = true
-      }
+      if (!(a.day === b.day && a.startMs < b.endMs && a.endMs > b.startMs)) continue
+      if (a.zz && b.zz) { if (zzOverlap) continue }
+      else if (a.zz || b.zz) { if (zzWithReg) continue }
+      a.result.conflict = true
+      b.result.conflict = true
     }
   }
 }
@@ -130,7 +136,7 @@ export function buildSchedule(timetable, scheduledCourses, prefs, prePlaced = []
     results.push({ code, name: entry.name, sections: pickedSections, color: colorMap[code], conflict: false })
   }
 
-  markConflicts(results)
+  markConflicts(results, prefs)
   return results
 }
 
@@ -168,8 +174,8 @@ export function buildPairSchedule(timetable, shared, yourSolo, friendSolo, prefs
 
   const you = [...cloneResults(sharedResults), ...buildSchedule(timetable, ys, prefs, seed)]
   const friend = [...cloneResults(sharedResults), ...buildSchedule(timetable, fs, prefs, seed)]
-  markConflicts(you)
-  markConflicts(friend)
+  markConflicts(you, prefs)
+  markConflicts(friend, prefs)
   return { you, friend }
 }
 

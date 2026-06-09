@@ -35,6 +35,16 @@ const DAYS = [
         <button class="pref-btn" :class="{ active: state.prefs.time === 'afternoon' }" @click="state.prefs.time = 'afternoon'">Afternoon</button>
       </div>
 
+      <label>Exam-reserved (ZZ) Blocks</label>
+      <div class="zz-opts">
+        <label class="zz-check">
+          <input type="checkbox" v-model="state.prefs.zzOverlap"> Allow ZZ blocks to overlap each other
+        </label>
+        <label class="zz-check">
+          <input type="checkbox" v-model="state.prefs.zzWithReg"> Allow ZZ blocks to overlap regular classes
+        </label>
+      </div>
+
       <details class="day-pref">
         <summary>Day Preferences</summary>
         <label>Free Days (no classes)</label>
@@ -129,6 +139,13 @@ const DAYS = [
   color: var(--gray-800) !important; margin-top: 14px;
 }
 .friend-hint { font-size: 11px; color: var(--gray-600); line-height: 1.5; margin: 4px 0; }
+.zz-opts { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.zz-check {
+  display: flex !important; align-items: flex-start; gap: 6px; flex-direction: row !important;
+  text-transform: none !important; letter-spacing: 0 !important; font-weight: 400 !important;
+  font-size: 12px !important; color: var(--gray-700) !important; margin: 0 !important; line-height: 1.4;
+}
+.zz-check input { margin-top: 1px; cursor: pointer; }
 .day-pref { margin-top: 12px; border-top: 1px solid var(--gray-200); padding-top: 8px; }
 .day-pref > summary {
   cursor: pointer; list-style: none; font-size: 12px; font-weight: 600;
