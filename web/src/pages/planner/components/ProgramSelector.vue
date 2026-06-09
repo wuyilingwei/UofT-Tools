@@ -73,6 +73,7 @@ function onImport() {
         <div class="sum-line">Specialist: <b>{{ programCounts.specialist }}</b></div>
         <div class="sum-line">Major: <b>{{ programCounts.major }}</b></div>
         <div class="sum-line">Minor: <b>{{ programCounts.minor }}</b></div>
+        <div v-for="(m, i) in legality.messages" :key="i" class="sum-warn">{{ m }}</div>
       </div>
 
       <!-- 2. Distribution (diversity) -->
@@ -100,11 +101,8 @@ function onImport() {
       <!-- 5. Projected outcome -->
       <div class="sum-block outlook" :class="{ done: outlook.ordinary || outlook.honours }">
         <div class="sum-head">Projected Outcome</div>
-        <div v-if="legality.messages.length">
-          <div v-for="(m, i) in legality.messages" :key="i" class="sum-warn">{{ m }}</div>
-        </div>
         <div class="sum-line" :class="{ 'sum-ok': outlook.ordinary }">{{ outlookText }}</div>
-        <div class="sum-disclaimer">Estimate only — verify your cGPA and any other graduation requirements with the Registrar.</div>
+        <div class="sum-disclaimer">Estimate only — other requirements (cGPA, etc.) not checked.</div>
       </div>
     </div>
 
