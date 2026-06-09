@@ -26,6 +26,9 @@ const showViews = computed(() => state.friend.enabled && state.friendBoard.lengt
           <span v-if="!term.published" class="term-unpub">timetable not published yet</span>
         </div>
         <ScheduleGrid :results="term.results" />
+        <div v-if="term.tba && term.tba.length" class="term-tba">
+          ⓘ No meeting times listed yet (TBA): {{ term.tba.join(', ') }}
+        </div>
       </div>
     </div>
   </div>
@@ -47,4 +50,5 @@ const showViews = computed(() => state.friend.enabled && state.friendBoard.lengt
   color: var(--blue); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid var(--gray-200);
 }
 .term-unpub { font-size: 11px; font-weight: 500; font-style: italic; color: #856404; }
+.term-tba { margin-top: 8px; padding: 6px 8px; font-size: 11px; line-height: 1.5; color: #856404; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; }
 </style>

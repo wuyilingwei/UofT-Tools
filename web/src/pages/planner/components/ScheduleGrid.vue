@@ -34,7 +34,7 @@ const blockTitle = (b) => `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}${b.f
             :key="i"
             class="course-block"
             :class="{ conflict: b.conflict, shared: b.shared }"
-            :style="{ top: b.top + 'px', height: b.height + 'px', background: b.color, color: '#fff' }"
+            :style="{ top: b.top + 'px', height: b.height + 'px', left: 'calc(' + (b.left || 0) + '% + 2px)', width: 'calc(' + (b.widthPct || 100) + '% - 4px)', background: b.color, color: '#fff' }"
             :title="blockTitle(b)"
           >
             <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span><span v-if="b.full" class="cb-full" title="Full-session course — runs in both terms">Y</span></div>

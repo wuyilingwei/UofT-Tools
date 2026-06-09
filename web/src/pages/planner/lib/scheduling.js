@@ -210,7 +210,7 @@ export function analyzeCourseConflicts(scopeTerms, timetables, selectedCodes, pr
   for (const code of candidates) {
     if (selected.includes(code)) continue
     if (!availability[code]?.length) {
-      hints[code] = { conflict: true, reason: anyPublished ? 'Not offered in this range' : 'Timetable unpublished' }
+      hints[code] = { conflict: true, reason: anyPublished ? 'Not offered here' : 'Timetable TBA' }
       continue
     }
 
@@ -225,7 +225,7 @@ export function analyzeCourseConflicts(scopeTerms, timetables, selectedCodes, pr
       return candidate && !candidate.missing && !results.some(r => r.conflict)
     })
 
-    if (!fits) hints[code] = { conflict: true, reason: 'No non-conflicting section found' }
+    if (!fits) hints[code] = { conflict: true, reason: 'Always conflicts' }
   }
 
   return hints
@@ -243,6 +243,35 @@ export function msToLabel(ms) {
   const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000)
   const ampm = h < 12 ? 'AM' : 'PM'
   return `${h > 12 ? h - 12 : h || 12}:${String(m).padStart(2, '0')} ${ampm}`
+}
+
+// Lay overlapping blocks within one day side-by-side: each cluster of mutually
+// overlapping blocks is split into equal-width columns so conflicting courses
+// show L/R instead of hiding each other. Sets `left` (%) and `widthPct` (%).
+export function layoutDayColumns(blocks) {
+  const sorted = blocks.sort((a, b) => a.top - b.top || (a.top + a.height) - (b.top + b.height))
+  let cluster = []
+  let clusterEnd = -Infinity
+  const flush = () => {
+    const colEnds = []
+    for (const blk of cluster) {
+      let col = colEnds.findIndex(end => blk.top >= end - 0.01)
+      if (col === -1) { col = colEnds.length; colEnds.push(0) }
+      colEnds[col] = blk.top + blk.height
+      blk._col = col
+    }
+    const ncols = colEnds.length || 1
+    for (const blk of cluster) { blk.left = (blk._col / ncols) * 100; blk.widthPct = 100 / ncols }
+    cluster = []
+    clusterEnd = -Infinity
+  }
+  for (const blk of sorted) {
+    if (cluster.length && blk.top >= clusterEnd - 0.01) flush()
+    cluster.push(blk)
+    clusterEnd = Math.max(clusterEnd, blk.top + blk.height)
+  }
+  flush()
+  return blocks
 }
 
 // Produce a renderable grid model: hour labels + per-day positioned blocks.
@@ -267,5 +296,6 @@ export function buildGrid(results) {
       }
     }
   }
+  for (const d of [1, 2, 3, 4, 5]) layoutDayColumns(dayBlocks[d])
   return { hours, dayBlocks, colHeight }
 }

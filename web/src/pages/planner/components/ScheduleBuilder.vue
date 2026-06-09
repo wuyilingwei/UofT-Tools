@@ -112,7 +112,7 @@ const DAYS = [
 </template>
 
 <style scoped>
-.avail { margin-left: auto; display: inline-flex; gap: 3px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.avail { display: inline-flex; gap: 3px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .avail-badge {
   font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 8px;
   background: #e8f4f8; color: var(--teal); white-space: nowrap;
@@ -120,7 +120,7 @@ const DAYS = [
 .avail-badge.full { background: #fef3c7; color: #92400e; }
 .avail-none { font-size: 10px; color: var(--gray-400); }
 .conflict-badge {
-  flex-basis: 100%; margin-left: 22px; font-size: 10px; color: var(--red); font-weight: 600;
+  grid-column: 1 / -1; margin-left: 22px; font-size: 10px; color: var(--red); font-weight: 600; line-height: 1.4;
 }
 .friend-toggle {
   display: flex !important; align-items: center; gap: 6px; flex-direction: row !important;

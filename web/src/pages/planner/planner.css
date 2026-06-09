@@ -121,7 +121,8 @@
 .day-check{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;cursor:pointer}
 .day-check input{cursor:pointer}
 .course-picks{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
-.course-pick{display:flex;align-items:center;gap:6px;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;cursor:pointer;transition:.1s;flex-wrap:wrap}
+/* Higher specificity than `.sched-controls label{display:block}` so the row actually lays out. */
+.course-picks .course-pick{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:6px;margin:0;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;font-weight:400;text-transform:none;letter-spacing:normal;color:var(--gray-800);cursor:pointer;transition:.1s}
 .course-pick.selected{background:#e8f4f8;border-color:var(--teal)}
 .course-pick.conflict{background:#fff5f5;border-color:#f5b5b5}
 .course-pick input[type=checkbox]{cursor:pointer}
@@ -139,7 +140,7 @@
 .day-col-bg{display:flex;flex-direction:column}
 .hour-block{height:60px;border-top:1px solid var(--gray-200)}
 .half-block{height:30px;border-top:1px dashed var(--gray-100)}
-.course-block{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;font-size:11px;overflow:hidden;cursor:default;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.course-block{position:absolute;border-radius:5px;padding:3px 5px;font-size:11px;overflow:hidden;cursor:default;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .course-block .cb-code{font-weight:700}
 .course-block .cb-room{opacity:.8;font-size:10px}
 .course-block.conflict{border:2px solid var(--red);opacity:.85}

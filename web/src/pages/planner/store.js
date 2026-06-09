@@ -291,8 +291,15 @@ function scheduleScope(scope, courses) {
     const inTerm = courses.filter(c => offered.has(c))
     const results = inTerm.length ? buildSchedule(tt, inTerm, prefsObj()) : []
     results.forEach(r => { if (fullCodes.has(r.code)) r.full = true })
-    return { value: term.value, label: term.label, results, published: (tt.courseCount || 0) > 0 }
+    // Offered but with no published meeting times → won't draw on the grid.
+    const tba = results.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
+    return { value: term.value, label: term.label, results, published: (tt.courseCount || 0) > 0, tba }
   })
+}
+
+// A scheduled result is renderable only if some section has a weekday meeting time.
+function hasRenderableTimes(r) {
+  return (r.sections || []).some(s => (s.times || []).some(t => t.day >= 1 && t.day <= 5 && t.endMs > t.startMs))
 }
 
 let refreshTimer = null
@@ -372,8 +379,10 @@ function buildPairBoards(scope) {
     const tt = mergedColumnTimetable(scope, term)
     const pair = buildPairSchedule(tt, shared, yourSolo, friendSolo, prefsObj())
     const published = (tt.courseCount || 0) > 0
-    you.push({ value: term.value, label: term.label, results: pair.you, published })
-    friend.push({ value: term.value, label: term.label, results: pair.friend, published })
+    const tbaYou = pair.you.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
+    const tbaFriend = pair.friend.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
+    you.push({ value: term.value, label: term.label, results: pair.you, published, tba: tbaYou })
+    friend.push({ value: term.value, label: term.label, results: pair.friend, published, tba: tbaFriend })
   }
   state.board = you
   state.friendBoard = friend
