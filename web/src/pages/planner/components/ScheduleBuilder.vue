@@ -1,7 +1,7 @@
 <script setup>
 import {
-  state, pendingCourses, scopes, courseOfferings, scheduledCodes, courseConflictHints, tbaCourses,
-  onScopeChange, isScheduledIn, toggleScheduledTerm,
+  state, pendingCourses, scopes, courseOfferings, scheduledCodes, scheduleWarnings, tbaCourses,
+  onScopeChange, isScheduledIn, toggleScheduledTerm, dayPref, cycleDayPref,
   toggleFriend, addFriendCourse, removeFriendCourse,
 } from '../store.js'
 import CoursePicker from './CoursePicker.vue'
@@ -10,6 +10,11 @@ const DAYS = [
   { d: 1, label: 'Mon' }, { d: 2, label: 'Tue' }, { d: 3, label: 'Wed' },
   { d: 4, label: 'Thu' }, { d: 5, label: 'Fri' },
 ]
+const WARN_TEXT = {
+  conflict: (w) => `${w.code}: time conflict`,
+  missing: (w) => `${w.code}: not offered in ${w.term}`,
+  tba: (w) => `${w.code}: no meeting times posted yet (${w.term}, TBA)`,
+}
 </script>
 
 <template>
@@ -21,6 +26,8 @@ const DAYS = [
         <option v-if="!scopes.length" value="">No sessions available</option>
         <option v-for="s in scopes" :key="s.id" :value="s.id">{{ s.label }}</option>
       </select>
+
+      <div class="pref-head">Preferences <span>— best-effort, never forced</span></div>
 
       <label>Schedule Density</label>
       <div class="pref-group">
@@ -35,6 +42,19 @@ const DAYS = [
         <button class="pref-btn" :class="{ active: state.prefs.time === 'afternoon' }" @click="state.prefs.time = 'afternoon'">Afternoon</button>
       </div>
 
+      <label>Days (click to cycle: prefer free → prefer classes → any)</label>
+      <div class="day-row">
+        <button
+          v-for="day in DAYS"
+          :key="day.d"
+          type="button"
+          class="day-btn"
+          :class="dayPref(day.d)"
+          :title="'Mon–Fri preference for ' + day.label"
+          @click="cycleDayPref(day.d)"
+        >{{ day.label }}<span class="day-state">{{ dayPref(day.d) === 'free' ? 'free' : dayPref(day.d) === 'busy' ? 'class' : '—' }}</span></button>
+      </div>
+
       <label>Exam-reserved (ZZ) Blocks</label>
       <div class="zz-opts">
         <label class="zz-check">
@@ -45,24 +65,14 @@ const DAYS = [
         </label>
       </div>
 
-      <details class="day-pref">
-        <summary>Day Preferences</summary>
-        <label>Free Days (no classes)</label>
-        <div class="day-checks">
-          <label v-for="day in DAYS" :key="'free-' + day.d" class="day-check">
-            <input type="checkbox" :value="day.d" v-model="state.prefs.freeDays"> {{ day.label }}
-          </label>
-        </div>
-
-        <label>Busy Days (prefer classes here)</label>
-        <div class="day-checks">
-          <label v-for="day in DAYS" :key="'busy-' + day.d" class="day-check">
-            <input type="checkbox" :value="day.d" v-model="state.prefs.busyDays"> {{ day.label }}
-          </label>
-        </div>
-      </details>
-
       <div class="sched-notice">{{ state.schedNotice }}</div>
+    </section>
+
+    <section v-if="scheduleWarnings.length" class="sched-warnings">
+      <h3>Warnings</h3>
+      <ul>
+        <li v-for="(w, i) in scheduleWarnings" :key="i" class="warn-item" :class="w.type">{{ WARN_TEXT[w.type](w) }}</li>
+      </ul>
     </section>
 
     <section class="sched-left">
@@ -76,10 +86,7 @@ const DAYS = [
           v-for="c in pendingCourses"
           :key="c.code"
           class="course-pick"
-          :class="{
-            selected: scheduledCodes.includes(c.code),
-            conflict: !!courseConflictHints[c.code],
-          }"
+          :class="{ selected: scheduledCodes.includes(c.code) }"
         >
           <span class="course-code">{{ c.code }}</span>
           <span class="seg-pills">
@@ -93,9 +100,6 @@ const DAYS = [
             >{{ t.label }}</button>
             <span v-if="tbaCourses.has(c.code)" class="avail-badge tba" title="Offered, but no meeting times posted yet (TBA)">TBA</span>
             <span v-if="!(courseOfferings[c.code] || []).length" class="avail-none" title="Not offered in this range (or not yet published)">—</span>
-          </span>
-          <span v-if="courseConflictHints[c.code]" class="conflict-badge">
-            {{ courseConflictHints[c.code].reason }}
           </span>
         </div>
       </div>
@@ -130,9 +134,22 @@ const DAYS = [
 .seg-pill.full.active { background: #92400e; border-color: #92400e; }
 .avail-badge.tba { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #f3f4f6; color: #6b7280; white-space: nowrap; }
 .avail-none { font-size: 10px; color: var(--gray-400); }
-.conflict-badge {
-  grid-column: 1 / -1; margin-left: 2px; font-size: 10px; color: var(--red); font-weight: 600; line-height: 1.4;
+.pref-head {
+  margin: 14px 0 4px; font-size: 12px; font-weight: 700; color: var(--gray-700);
+  border-top: 1px solid var(--gray-200); padding-top: 10px;
 }
+.pref-head span { font-weight: 400; font-size: 11px; color: var(--gray-500); }
+.day-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 6px; }
+.day-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 4px 0;
+  border: 1px solid var(--gray-200); border-radius: 6px; background: #fff; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--gray-700); transition: .1s;
+}
+.day-btn .day-state { font-size: 9px; font-weight: 600; text-transform: uppercase; color: var(--gray-400); }
+.day-btn.free { background: #fff5f5; border-color: #f5b5b5; color: #b91c1c; }
+.day-btn.free .day-state { color: #b91c1c; }
+.day-btn.busy { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.day-btn.busy .day-state { color: #15803d; }
 .friend-toggle {
   display: flex !important; align-items: center; gap: 6px; flex-direction: row !important;
   text-transform: none !important; letter-spacing: 0 !important; font-size: 13px !important;
@@ -146,13 +163,10 @@ const DAYS = [
   font-size: 12px !important; color: var(--gray-700) !important; margin: 0 !important; line-height: 1.4;
 }
 .zz-check input { margin-top: 1px; cursor: pointer; }
-.day-pref { margin-top: 12px; border-top: 1px solid var(--gray-200); padding-top: 8px; }
-.day-pref > summary {
-  cursor: pointer; list-style: none; font-size: 12px; font-weight: 600;
-  color: var(--gray-600); text-transform: uppercase; letter-spacing: .3px;
-  display: flex; align-items: center; gap: 6px; user-select: none;
-}
-.day-pref > summary::-webkit-details-marker { display: none; }
-.day-pref > summary::before { content: '▸'; font-size: 10px; color: var(--gray-400); transition: transform .15s; }
-.day-pref[open] > summary::before { transform: rotate(90deg); }
+.sched-warnings { padding: 14px; border-bottom: 1px solid var(--gray-200); background: #fffbeb; }
+.sched-warnings h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #92400e; }
+.sched-warnings ul { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.warn-item { font-size: 12px; line-height: 1.4; color: #92400e; padding-left: 16px; position: relative; }
+.warn-item::before { content: '⚠'; position: absolute; left: 0; }
+.warn-item.conflict { color: var(--red); }
 </style>

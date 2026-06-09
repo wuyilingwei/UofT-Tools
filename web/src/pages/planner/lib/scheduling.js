@@ -49,19 +49,21 @@ export function badgeTerms(scope) {
   return scope.full ? [...scope.terms, scope.full] : [...scope.terms]
 }
 
+// Soft preferences (not hard constraints): avoiding a conflict (-50) always
+// outweighs day/time/density preferences, so a course is still placed even when
+// it can only fit on a less-preferred day or time.
 export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
   let score = 50
   for (const t of sec.times) {
     if (!t.day) continue
-    if (freeDays.includes(t.day)) score -= 100
-    if (busyDays.includes(t.day)) score += 20
+    if (freeDays.includes(t.day)) score -= 25   // prefer to keep this day free
+    if (busyDays.includes(t.day)) score += 20   // prefer classes on this day
     const hr = t.startMs / 3600000
     if (timePref === 'morning' && hr >= 12) score -= 15
     if (timePref === 'afternoon' && hr < 12) score -= 15
-    if (density === 'compact') {
-      const sameDayPlaced = placed.filter(p => p.day === t.day).length
-      score += sameDayPlaced * 5
-    }
+    const sameDayPlaced = placed.filter(p => p.day === t.day).length
+    if (density === 'compact') score += sameDayPlaced * 5      // cluster onto fewer days
+    else if (density === 'spread') score -= sameDayPlaced * 5  // spread across more days
     for (const p of placed) {
       if (p.day === t.day && t.startMs < p.endMs && t.endMs > p.startMs) score -= 50
     }

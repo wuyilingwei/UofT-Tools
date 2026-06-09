@@ -2,7 +2,7 @@ import { reactive, computed, watch } from 'vue'
 import { buildCourseList, computeLegality, computeSuggestions, courseCredit, computeDistribution } from './lib/courses.js'
 import {
   buildSchedule, buildScopes, buildPairSchedule,
-  buildCourseAvailability, analyzeCourseConflicts, badgeTerms,
+  buildCourseAvailability, badgeTerms,
 } from './lib/scheduling.js'
 
 const BASE = ''
@@ -156,17 +156,24 @@ export const scheduleSelection = computed(() => ({
   prefs: prefsObj(),
 }))
 
-export const courseConflictHints = computed(() => {
-  const scope = currentScope.value
-  if (!scope) return {}
-  return analyzeCourseConflicts(
-    scope.terms,
-    state.timetables,
-    scheduledCodes.value,
-    prefsObj(),
-    pendingCourses.value.map(c => c.code),
-    scope.full,
-  )
+// Warnings about the ACTUAL scheduled board only — never about courses you
+// haven't scheduled. { type: 'conflict'|'missing'|'tba', code, term? }
+export const scheduleWarnings = computed(() => {
+  const out = []
+  const seen = { conflict: new Set(), missing: new Set(), tba: new Set() }
+  const add = (type, code, term) => {
+    if (seen[type].has(code)) return
+    seen[type].add(code)
+    out.push({ type, code, term })
+  }
+  for (const term of state.board) {
+    for (const r of term.results) {
+      if (r.missing) add('missing', r.code, term.label)
+      else if (r.conflict) add('conflict', r.code)
+    }
+    for (const code of (term.tba || [])) add('tba', code, term.label)
+  }
+  return out
 })
 export const courseAvailability = availability
 
@@ -357,6 +364,21 @@ function prefsObj() {
   }
 }
 
+// Day preference per weekday (Mon–Fri), cycling neutral → free → busy → neutral.
+export function dayPref(d) {
+  if (state.prefs.freeDays.includes(d)) return 'free'
+  if (state.prefs.busyDays.includes(d)) return 'busy'
+  return 'neutral'
+}
+export function cycleDayPref(d) {
+  const cur = dayPref(d)
+  state.prefs.freeDays = state.prefs.freeDays.filter(x => x !== d)
+  state.prefs.busyDays = state.prefs.busyDays.filter(x => x !== d)
+  if (cur === 'neutral') state.prefs.freeDays = [...state.prefs.freeDays, d]
+  else if (cur === 'free') state.prefs.busyDays = [...state.prefs.busyDays, d]
+  queueScheduleRefresh()
+}
+
 // Build the per-term schedule from the per-segment selection (state.scheduled).
 // A course lands in a column when its pill for that column is on, or when its
 // full-session pill is on (a Y course spans both columns).
@@ -416,13 +438,8 @@ export async function refreshSchedule() {
     state.scheduleView = 'you'
   }
 
-  const board = state.board
-  const conflicts = board.reduce((n, t) => n + t.results.filter(r => r.conflict).length, 0)
-  const unpublished = board.some(t => !t.published)
-  const hintCount = Object.keys(courseConflictHints.value).length
-  state.schedNotice = unpublished ? 'One or more terms have no published timetable yet.'
-    : conflicts || hintCount ? `${conflicts + hintCount} conflict warning(s). Adjust courses or preferences.`
-      : 'Schedule updated.'
+  const unpublished = state.board.some(t => !t.published)
+  state.schedNotice = unpublished ? 'One or more terms have no published timetable yet.' : 'Schedule updated.'
 }
 
 export const generateSchedule = refreshSchedule
