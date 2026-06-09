@@ -1,6 +1,5 @@
 <script setup>
 import { suggestions, addSuggested } from '../store.js'
-import { badgeClass } from '../lib/courses.js'
 </script>
 
 <template>
@@ -14,7 +13,7 @@ import { badgeClass } from '../lib/courses.js'
         :title="'Add ' + s.name"
         @click="addSuggested(s.id)"
       >
-        {{ s.name }} <span class="badge" :class="badgeClass(s.type)" style="margin-left:3px">{{ s.type }}</span>
+        {{ s.name }} <span class="sugg-type">{{ s.type }}</span>
         <span class="sugg-score">({{ s.shared }} shared)</span>
       </span>
     </div>

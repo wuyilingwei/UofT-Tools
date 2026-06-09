@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from 'vue'
-import { state, courseList, getStatus, setCourseStatus, isSatisfied, removeExtraCourse } from '../store.js'
+import { state, courseList, getStatus, setCourseStatus, isSatisfied } from '../store.js'
 import { badgeClass, courseYear, prereqTokens } from '../lib/courses.js'
 
 const ROW_CLS = ['', 's-planned', 's-progress', 's-done']
-const STATUS_LABELS = ['None', 'Plan', 'Taking', 'Done']
+// Prereq quick-select cycles status: None → Plan → Taking → Done → None.
 const cycleStatus = (code) => setCourseStatus(code, (getStatus(code) + 1) % 4)
 
 const allSelectedCodes = computed(() => new Set(courseList.value.map(c => c.code)))
@@ -63,7 +63,7 @@ const stats = computed(() => {
       <thead>
         <tr>
           <th>Status</th>
-          <th>Course</th>
+          <th class="c-course">Course</th>
           <th>Required by</th>
           <th>{{ state.courses ? 'Prereqs' : 'Year' }}</th>
           <th v-if="state.courses">Year</th>
@@ -72,17 +72,18 @@ const stats = computed(() => {
       <tbody>
         <tr v-for="row in rows" :key="row.code" :class="row.rowCls">
           <td>
-            <button
-              class="sp-cycle"
-              :class="ROW_CLS[getStatus(row.code)]"
-              title="Click to cycle: None → Plan → Taking → Done"
-              @click="cycleStatus(row.code)"
-            >{{ STATUS_LABELS[getStatus(row.code)] }}</button>
+            <div class="sp">
+              <button class="sp-b" :class="{ 's-none': getStatus(row.code) === 0 }" @click="setCourseStatus(row.code, 0)">None</button>
+              <button class="sp-b" :class="{ 's-planned': getStatus(row.code) === 1 }" @click="setCourseStatus(row.code, 1)">Plan</button>
+              <button class="sp-b" :class="{ 's-progress': getStatus(row.code) === 2 }" @click="setCourseStatus(row.code, 2)">Taking</button>
+              <button class="sp-b" :class="{ 's-done': getStatus(row.code) === 3 }" @click="setCourseStatus(row.code, 3)">Done</button>
+            </div>
           </td>
-          <td>
+          <td class="c-course">
             <a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank" title="Open course page">{{ row.code }}</a><span
-              v-if="row.exclConflicts.length" class="excl-flag" :title="'Exclusion: ' + row.exclConflicts.join(', ')">⊘</span><span
-              v-if="row.added" class="added-x" title="Remove added course" @click="removeExtraCourse(row.code)">×</span>
+              v-if="row.exclConflicts.length" class="excl-flag" tabindex="0" role="note"
+              :aria-label="'Exclusion conflict — you can only count one of ' + row.code + ' and ' + row.exclConflicts.join(', ')"
+            >⊘<span class="excl-tip">Exclusion: you may only count one of <b>{{ row.code }}</b> and {{ row.exclConflicts.join(', ') }} toward your programs.</span></span>
           </td>
           <td>
             <div class="programs-tags">
@@ -97,7 +98,7 @@ const stats = computed(() => {
           <td>
             <template v-if="row.meta">
               <span v-if="row.prereq.none" class="prereq-none">—</span>
-              <div v-else class="prereq-cell"><span v-if="row.prereq.met" class="prereq-met">✓</span><span v-else class="prereq-warn-icon">⚠</span>{{ ' ' }}<template v-for="(t, i) in row.prereq.tokens" :key="i"><span v-if="t.course" :class="t.cls" :title="t.tip" @click="setCourseStatus(t.code, t.next)">{{ t.code }}</span><template v-else>{{ t.text }}</template></template></div>
+              <div v-else class="prereq-cell"><span v-if="row.prereq.met" class="prereq-met">✓</span><span v-else class="prereq-warn-icon">⚠</span>{{ ' ' }}<template v-for="(t, i) in row.prereq.tokens" :key="i"><span v-if="t.course" :class="t.cls" title="Click to cycle: None → Plan → Taking → Done" @click="cycleStatus(t.code)">{{ t.code }}</span><template v-else>{{ t.text }}</template></template></div>
             </template>
             <template v-else>
               <span v-if="row.year" style="color:var(--gray-600);font-size:12px">Y{{ row.year }}</span>
