@@ -182,12 +182,21 @@
 .course-table tr.s-planned td{background:#eff6ff}
 
 /* ── Data import/export ── */
-.degree-progress{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;font-size:11px}
-.degree-progress .dp-total{font-weight:700;color:var(--gray-700);background:var(--gray-100);padding:2px 8px;border-radius:10px}
-.degree-progress .dp-cat{padding:2px 7px;border-radius:10px;font-weight:600;background:#fff5f5;color:#b91c1c;border:1px solid #fecaca}
-.degree-progress .dp-cat.met{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
-.degree-progress .dp-cat.met::after{content:' ✓'}
-.degree-progress .dp-hint{color:var(--gray-500);font-style:italic}
+/* Satisfaction summary — three at-a-glance blocks */
+.summary{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;font-size:12px}
+.sum-block{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:7px 9px}
+.sum-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500);margin-bottom:4px}
+.sum-head .sum-note{font-weight:400;text-transform:none;letter-spacing:0}
+.sum-line{line-height:1.6;color:var(--gray-700)}
+.sum-sep{color:var(--gray-400);margin:0 4px}
+.sum-warn{color:#856404;line-height:1.5}
+.sum-ok{color:var(--green);font-weight:600}
+.summary .met{color:var(--green);font-weight:600}
+.summary .met::after{content:' ✓'}
+.dp-row{display:flex;flex-wrap:wrap;gap:6px}
+.dp-cat{padding:2px 7px;border-radius:10px;font-weight:600;font-size:11px;background:#fff5f5;color:#b91c1c;border:1px solid #fecaca}
+.dp-cat.met{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.dp-cat.met::after{content:' ✓'}
 .data-btns{display:flex;gap:6px;margin-top:6px}
 .data-btn{padding:3px 9px;border:1px solid var(--gray-200);border-radius:5px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray-600);transition:.1s}
 .data-btn:hover{border-color:var(--teal);color:var(--teal)}

@@ -47,21 +47,41 @@ function onImport() {
       </div>
     </div>
 
-    <div id="prog-legality" style="font-size:12px;margin-bottom:6px">
-      <template v-if="legality.messages.length">
-        <template v-for="(m, i) in legality.messages" :key="i">
-          <span style="color:#856404">{{ m }}</span><br>
-        </template>
-      </template>
-      <span v-else-if="legality.success" style="color:var(--green)">✓ {{ legality.success }}</span>
-    </div>
+    <div class="summary" title="Counts courses you marked Plan / Taking / Done">
+      <!-- Program combination + total credits -->
+      <div class="sum-block">
+        <div class="sum-head">Program &amp; Credits</div>
+        <div id="prog-legality">
+          <template v-if="legality.messages.length">
+            <div v-for="(m, i) in legality.messages" :key="i" class="sum-warn">{{ m }}</div>
+          </template>
+          <div v-else-if="legality.success" class="sum-ok">✓ {{ legality.success }}</div>
+        </div>
+        <div class="sum-line">Total marked: <b>{{ degreeProgress.total.toFixed(1) }}</b> credits</div>
+      </div>
 
-    <div class="degree-progress" title="Counts courses you marked Plan / Taking / Done">
-      <span class="dp-total">{{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span>
-      <span class="dp-cat" :class="{ met: degreeProgress.cats.Science >= 1 }">Sci {{ degreeProgress.cats.Science.toFixed(1) }}</span>
-      <span class="dp-cat" :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">SSc {{ degreeProgress.cats['Social Science'].toFixed(1) }}</span>
-      <span class="dp-cat" :class="{ met: degreeProgress.cats.Humanities >= 1 }">Hum {{ degreeProgress.cats.Humanities.toFixed(1) }}</span>
-      <span class="dp-hint">distribution needs ≥1.0 in each</span>
+      <!-- Distribution / diversity -->
+      <div class="sum-block">
+        <div class="sum-head">Distribution <span class="sum-note">(≥1.0 in each)</span></div>
+        <div class="dp-row">
+          <span class="dp-cat" :class="{ met: degreeProgress.cats.Science >= 1 }">Sci {{ degreeProgress.cats.Science.toFixed(1) }}</span>
+          <span class="dp-cat" :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">SSc {{ degreeProgress.cats['Social Science'].toFixed(1) }}</span>
+          <span class="dp-cat" :class="{ met: degreeProgress.cats.Humanities >= 1 }">Hum {{ degreeProgress.cats.Humanities.toFixed(1) }}</span>
+        </div>
+      </div>
+
+      <!-- Degree requirements (ordinary / honours, Arts & Science) -->
+      <div class="sum-block">
+        <div class="sum-head">Degree Requirements</div>
+        <div class="sum-line">
+          <span :class="{ met: degreeProgress.total >= 15 }">Ordinary: {{ degreeProgress.total.toFixed(1) }} / 15.0 cr</span>
+        </div>
+        <div class="sum-line">
+          <span :class="{ met: degreeProgress.total >= 20 }">Honours (HBA/HBSc): {{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span>
+          <span class="sum-sep">·</span>
+          <span :class="{ met: degreeProgress.upper >= 6 }">300/400-level {{ degreeProgress.upper.toFixed(1) }} / 6.0</span>
+        </div>
+      </div>
     </div>
 
     <CoursePicker />

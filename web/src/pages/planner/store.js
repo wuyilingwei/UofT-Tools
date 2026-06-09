@@ -1,5 +1,5 @@
 import { reactive, computed, watch } from 'vue'
-import { buildCourseList, computeLegality, computeSuggestions, courseCredit, computeDistribution } from './lib/courses.js'
+import { buildCourseList, computeLegality, computeSuggestions, courseCredit, courseYear, computeDistribution } from './lib/courses.js'
 import {
   buildScopes, buildPairSchedule, rankedSchedules,
   buildCourseAvailability, badgeTerms,
@@ -106,7 +106,10 @@ export const lockedExtraCourses = computed(() => {
 // course the student has marked Plan/Taking/Done.
 export const degreeProgress = computed(() => {
   const codes = Object.keys(state.courseStatus).filter(c => state.courseStatus[c] >= 1)
-  return computeDistribution(codes, courseCredit, c => state.courses?.[c]?.distribution || '')
+  const dist = computeDistribution(codes, courseCredit, c => state.courses?.[c]?.distribution || '')
+  let upper = 0
+  for (const code of codes) if ((courseYear(code) || 0) >= 3) upper += courseCredit(code)
+  return { ...dist, upper }
 })
 
 // ── Scheduling scopes / availability ──

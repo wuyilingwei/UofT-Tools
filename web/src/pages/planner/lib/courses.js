@@ -140,7 +140,9 @@ export function computeLegality(active) {
 // UTM degree progress from a set of course codes: total credits + the
 // Distribution Requirement (≥1.0 credit in each of Humanities / Sciences /
 // Social Sciences). `creditOf(code)` → credit weight; `distOf(code)` → category.
-export const DEGREE_CREDITS = 20.0
+export const DEGREE_CREDITS = 20.0     // Honours bachelor (HBA / HBSc)
+export const ORDINARY_CREDITS = 15.0   // Ordinary (3-year) bachelor
+export const UPPER_REQUIRED = 6.0       // 300/400-level credits for an Honours degree
 export const DIST_CATEGORIES = ['Science', 'Social Science', 'Humanities']
 export const DIST_MIN = 1.0
 
