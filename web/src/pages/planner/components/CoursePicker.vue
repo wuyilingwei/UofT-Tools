@@ -74,7 +74,7 @@ function add(code) {
           class="cp-chip locked"
           :class="'st-' + getStatus(code)"
           title="Marked outside your selected programs — kept here for reference"
-        >🔒 {{ code }}</span>
+        >{{ code }}</span>
       </div>
     </div>
   </div>

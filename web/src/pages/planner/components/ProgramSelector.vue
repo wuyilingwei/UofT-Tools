@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { state, legality, degreeProgress, degreeProgressActual, degreeBreakdown, programCounts, activePrograms, toggleProgram, toggleIntention, applyImported } from '../store.js'
 import { chipClass } from '../lib/courses.js'
 import { exportPlanner, importPlanner } from '../lib/dataio.js'
+import CoursePicker from './CoursePicker.vue'
 
 const shortName = (p) => p.name.split(' - ')[0] || p.name
 const chipTitle = (p) => p.intention ? 'Intention (planning)' : p.type + ' — ' + (p.code || '')
@@ -181,5 +182,7 @@ function onImport() {
         <div class="sum-disclaimer">Estimate only — other requirements (cGPA, etc.) not checked.</div>
       </div>
     </div>
+
+    <CoursePicker />
   </div>
 </template>
