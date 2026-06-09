@@ -210,13 +210,18 @@
 .sum-sep{color:var(--gray-400);margin:0 4px}
 .sum-warn{color:#856404;line-height:1.5}
 .sum-ok{color:var(--green);font-weight:600}
-.sum-block.outlook{background:#eef6ff;border-color:#bfdbfe}
-.sum-block.outlook.done{background:#f0fdf4;border-color:#86efac}
+.sum-block.outlook{background:#f9fafb;border-color:var(--gray-200)}
+.sum-block.outlook.bd-done{background:#f0fdf4;border-color:#86efac}
+.sum-block.outlook.bd-done .sum-head{color:#15803d}
+.sum-block.outlook.bd-taking{background:#fef9c3;border-color:#fde047}
+.sum-block.outlook.bd-taking .sum-head{color:#854d0e}
+.sum-block.outlook.bd-planned{background:#eff6ff;border-color:#bfdbfe}
+.sum-block.outlook.bd-planned .sum-head{color:#1d4ed8}
 .sum-breakdown{font-size:10px;color:var(--gray-500);margin-top:2px;line-height:1.4}
 .seg-planned{color:#1d4ed8;font-weight:600}
 .seg-taking{color:#92400e;font-weight:600}
 .seg-done{color:#15803d;font-weight:600}
-.seg-req{color:var(--gray-400)}
+.seg-req{color:#9ca3af;font-weight:400}
 .sum-block.bd-done{border-color:#86efac;background:#f0fdf4}
 .sum-block.bd-done .sum-head{color:#15803d}
 .sum-block.bd-taking{border-color:#fde047;background:#fef9c3}
