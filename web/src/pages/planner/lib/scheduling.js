@@ -152,6 +152,78 @@ export function buildSchedule(timetable, scheduledCourses, prefs, prePlaced = []
   return results
 }
 
+// Preference-only score for a whole arrangement (conflicts are ranked separately).
+function scheduleScore(results, { freeDays, busyDays, time, density }) {
+  let score = 0
+  const days = new Set()
+  for (const r of results) {
+    for (const sec of (r.sections || [])) {
+      for (const t of sec.times) {
+        if (!t.day) continue
+        days.add(t.day)
+        if (freeDays.includes(t.day)) score -= 25
+        if (busyDays.includes(t.day)) score += 20
+        const hr = t.startMs / 3600000
+        if (time === 'morning' && hr >= 12) score -= 15
+        if (time === 'afternoon' && hr < 12) score -= 15
+      }
+    }
+  }
+  if (density === 'compact') score += (5 - days.size) * 10   // fewer distinct days
+  else if (density === 'spread') score += days.size * 10      // more distinct days
+  return score
+}
+
+// Enumerate every LEC×TUT combination across the courses, then rank: fewest
+// conflicts first, then best preference score. This guarantees a conflict-free
+// arrangement is chosen whenever one exists (preferences never force a clash),
+// and exposes the ranked alternatives for the user to step through.
+export function rankedSchedules(timetable, codes, prefs, limit = 5000, keep = 50) {
+  const lookup = new Map()
+  for (const c of timetable.courses) if (!lookup.has(c.code)) lookup.set(c.code, c)
+  const colorMap = {}
+  let ci = 0
+  for (const code of codes) if (!colorMap[code]) colorMap[code] = COLORS[ci++ % COLORS.length]
+
+  const per = codes.map(code => {
+    const entry = lookup.get(code)
+    if (!entry) return { code, missing: true, opts: [[]] }
+    const lecs = entry.sections.filter(s => s.type === 'LEC' || s.type === 'ASYNC')
+    const tuts = entry.sections.filter(s => s.type === 'TUT' || s.type === 'PRA')
+    const L = lecs.length ? lecs.map(s => [s]) : [[]]
+    const T = tuts.length ? tuts.map(s => [s]) : [[]]
+    const opts = []
+    for (const l of L) for (const t of T) opts.push([...l, ...t])
+    return { code, name: entry.name, opts }
+  })
+
+  // Cap the search: if the product is too large, keep each course's best few options.
+  const product = () => per.reduce((n, p) => n * p.opts.length, 1)
+  if (product() > limit) {
+    for (const p of per) {
+      if (p.missing) continue
+      p.opts = p.opts
+        .map(o => ({ o, s: o.reduce((sum, sec) => sum + scoreSec(sec, prefs.freeDays, prefs.busyDays, prefs.density, prefs.time, []), 0) }))
+        .sort((a, b) => b.s - a.s).slice(0, 3).map(x => x.o)
+    }
+  }
+
+  const out = []
+  const idx = new Array(per.length).fill(0)
+  const combos = Math.min(product(), limit)
+  for (let n = 0; n < combos; n++) {
+    const results = per.map((p, i) => p.missing
+      ? { code: p.code, name: 'Not in timetable', sections: [], color: colorMap[p.code], missing: true }
+      : { code: p.code, name: p.name, sections: [...p.opts[idx[i]]], color: colorMap[p.code], conflict: false })
+    markConflicts(results, prefs)
+    const conflicts = results.filter(r => r.conflict).length
+    out.push({ results, conflicts, score: scheduleScore(results, prefs) })
+    for (let i = per.length - 1; i >= 0; i--) { idx[i]++; if (idx[i] < per[i].opts.length) break; idx[i] = 0 }
+  }
+  out.sort((a, b) => a.conflicts - b.conflicts || b.score - a.score)
+  return out.slice(0, keep)
+}
+
 // Time blocks occupied by a set of scheduled results.
 function placedTimes(results) {
   const out = []

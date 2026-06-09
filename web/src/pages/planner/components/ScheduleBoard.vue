@@ -1,10 +1,11 @@
 <script setup>
 import { computed } from 'vue'
-import { state } from '../store.js'
+import { state, setAlt } from '../store.js'
 import ScheduleGrid from './ScheduleGrid.vue'
 
 const activeBoard = computed(() => (state.scheduleView === 'friend' ? state.friendBoard : state.board))
 const showViews = computed(() => state.friend.enabled && state.friendBoard.length > 0)
+const canNavigate = computed(() => state.scheduleView !== 'friend')
 </script>
 
 <template>
@@ -24,6 +25,12 @@ const showViews = computed(() => state.friend.enabled && state.friendBoard.lengt
         <div class="term-head">
           {{ term.label }}
           <span v-if="!term.published" class="term-unpub">timetable not published yet</span>
+          <span v-if="term.conflicts" class="term-confl">{{ term.conflicts }} conflict(s)</span>
+          <div v-if="canNavigate && term.optionCount > 1" class="alt-nav">
+            <button class="alt-btn" :disabled="term.optionIndex === 0" @click="setAlt(term.value, term.optionIndex - 1)">‹</button>
+            <span class="alt-label">option {{ term.optionIndex + 1 }} / {{ term.optionCount }}</span>
+            <button class="alt-btn" :disabled="term.optionIndex >= term.optionCount - 1" @click="setAlt(term.value, term.optionIndex + 1)">›</button>
+          </div>
         </div>
         <ScheduleGrid :results="term.results" />
       </div>
@@ -47,4 +54,13 @@ const showViews = computed(() => state.friend.enabled && state.friendBoard.lengt
   color: var(--blue); margin-bottom: 8px; padding-bottom: 4px; border-bottom: 2px solid var(--gray-200);
 }
 .term-unpub { font-size: 11px; font-weight: 500; font-style: italic; color: #856404; }
+.term-confl { font-size: 11px; font-weight: 600; color: var(--red); }
+.alt-nav { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; }
+.alt-label { font-size: 11px; font-weight: 500; color: var(--gray-600); }
+.alt-btn {
+  width: 22px; height: 22px; line-height: 1; border: 1px solid var(--gray-300); border-radius: 5px;
+  background: #fff; cursor: pointer; color: var(--gray-700); font-size: 14px;
+}
+.alt-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+.alt-btn:disabled { opacity: .4; cursor: default; }
 </style>

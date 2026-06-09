@@ -1,7 +1,7 @@
 import { reactive, computed, watch } from 'vue'
 import { buildCourseList, computeLegality, computeSuggestions, courseCredit, computeDistribution } from './lib/courses.js'
 import {
-  buildSchedule, buildScopes, buildPairSchedule,
+  buildScopes, buildPairSchedule, rankedSchedules,
   buildCourseAvailability, badgeTerms,
 } from './lib/scheduling.js'
 
@@ -49,6 +49,7 @@ export const state = reactive({
   timetables: {},              // sessionValue → timetable data (lazy cache)
   scheduled: {},               // code → [termValue,…] : which segment(s) to schedule per course
   board: [],                   // [{value,label,results,published}] — your schedule per term
+  altIndex: {},                // termValue → which ranked alternative is shown
   friend: { enabled: false, courses: [] },  // friend co-scheduling (Phase E)
   friendBoard: [],             // friend's schedule per term
   scheduleView: 'you',         // 'you' | 'friend'
@@ -130,6 +131,14 @@ export const courseOfferings = computed(() => {
 export const scheduledCodes = computed(() =>
   Object.keys(state.scheduled).filter(c => (state.scheduled[c] || []).length),
 )
+
+// Whether any timetable in the current scope is published yet — lets the picker
+// distinguish "not offered in this range" from "timetable not published yet".
+export const scopePublished = computed(() => {
+  const scope = currentScope.value
+  if (!scope) return false
+  return badgeTerms(scope).some(t => (state.timetables[t.value]?.courseCount || 0) > 0)
+})
 
 export const scheduleSelection = computed(() => ({
   scheduled: JSON.parse(JSON.stringify(state.scheduled)),
@@ -330,6 +339,7 @@ function mergedColumnTimetable(scope, term) {
 
 export async function onScopeChange() {
   state.scheduled = {}   // switching range clears all segment selections
+  state.altIndex = {}
   state.board = []
   state.friendBoard = []
   state.schedNotice = 'Loading timetable…'
@@ -364,25 +374,58 @@ export function cycleDayPref(d) {
 }
 
 // Build the per-term schedule from the per-segment selection (state.scheduled).
-// A course lands in a column when its pill for that column is on, or when its
-// full-session pill is on (a Y course spans both columns).
-function scheduleScope(scope) {
-  const fullTT = scope.full ? state.timetables[scope.full.value] : null
-  const fullCodes = new Set((fullTT?.courses || []).map(c => c.code))
-  const fullVal = scope.full?.value
-  return scope.terms.map(term => {
-    const tt = mergedColumnTimetable(scope, term)
-    const offered = new Set((tt.courses || []).map(c => c.code))
-    const inTerm = [...offered].filter(code => {
-      const sel = state.scheduled[code] || []
-      return sel.includes(term.value) || (fullCodes.has(code) && fullVal && sel.includes(fullVal))
-    })
-    const results = inTerm.length ? buildSchedule(tt, inTerm, prefsObj()) : []
-    results.forEach(r => { if (fullCodes.has(r.code)) r.full = true })
-    // Offered but with no published meeting times → won't draw on the grid.
-    const tba = results.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
-    return { value: term.value, label: term.label, results, published: (tt.courseCount || 0) > 0, tba }
+// Cached ranked alternatives per column (recomputed only on selection/pref change).
+let optionsCache = {}
+
+function columnCodes(scope, term, fullCodes, fullVal) {
+  const tt = mergedColumnTimetable(scope, term)
+  const offered = new Set((tt.courses || []).map(c => c.code))
+  return [...offered].filter(code => {
+    const sel = state.scheduled[code] || []
+    return sel.includes(term.value) || (fullCodes.has(code) && fullVal && sel.includes(fullVal))
   })
+}
+
+// Enumerate + rank every column's possible schedules; reset which alternative is shown.
+function computeOptions(scope) {
+  const fullCodes = new Set((scope.full ? (state.timetables[scope.full.value]?.courses || []) : []).map(c => c.code))
+  const fullVal = scope.full?.value
+  optionsCache = {}
+  state.altIndex = {}
+  for (const term of scope.terms) {
+    const tt = mergedColumnTimetable(scope, term)
+    const inTerm = columnCodes(scope, term, fullCodes, fullVal)
+    optionsCache[term.value] = inTerm.length ? rankedSchedules(tt, inTerm, prefsObj()) : [{ results: [], conflicts: 0, score: 0 }]
+  }
+}
+
+// Render the board from the cached options at the currently-selected alternative.
+function renderSoloBoard(scope) {
+  const fullCodes = new Set((scope.full ? (state.timetables[scope.full.value]?.courses || []) : []).map(c => c.code))
+  state.board = scope.terms.map(term => {
+    const tt = mergedColumnTimetable(scope, term)
+    const options = optionsCache[term.value] || [{ results: [], conflicts: 0 }]
+    const i = Math.min(Math.max(state.altIndex[term.value] || 0, 0), options.length - 1)
+    const chosen = options[i] || options[0] || { results: [], conflicts: 0 }
+    chosen.results.forEach(r => { if (fullCodes.has(r.code)) r.full = true })
+    const tba = chosen.results.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
+    return {
+      value: term.value, label: term.label, results: chosen.results,
+      published: (tt.courseCount || 0) > 0, tba,
+      optionIndex: i, optionCount: options.length, conflicts: chosen.conflicts || 0,
+    }
+  })
+  state.friendBoard = []
+  state.scheduleView = 'you'
+}
+
+// Step through the ranked alternatives for one column (no recompute).
+export function setAlt(termValue, i) {
+  const opts = optionsCache[termValue]
+  if (!opts) return
+  state.altIndex[termValue] = Math.min(Math.max(i, 0), opts.length - 1)
+  const scope = currentScope.value
+  if (scope) renderSoloBoard(scope)
 }
 
 // A scheduled result is renderable only if some section has a weekday meeting time.
@@ -417,9 +460,8 @@ export async function refreshSchedule() {
   if (friendOn) {
     buildPairBoards(scope)
   } else {
-    state.board = scheduleScope(scope)
-    state.friendBoard = []
-    state.scheduleView = 'you'
+    computeOptions(scope)
+    renderSoloBoard(scope)
   }
 
   const unpublished = state.board.some(t => !t.published)

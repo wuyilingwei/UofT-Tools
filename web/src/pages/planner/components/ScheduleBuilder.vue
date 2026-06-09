@@ -1,6 +1,6 @@
 <script setup>
 import {
-  state, pendingCourses, scopes, courseOfferings, scheduledCodes, scheduleWarnings,
+  state, pendingCourses, scopes, courseOfferings, scheduledCodes, scheduleWarnings, scopePublished,
   onScopeChange, isScheduledIn, toggleScheduledTerm, dayPref, cycleDayPref,
   toggleFriend, addFriendCourse, removeFriendCourse,
 } from '../store.js'
@@ -101,7 +101,7 @@ const WARN_TEXT = {
               :title="t.tba ? 'Offered, but no meeting times posted yet (TBA)' : ''"
               @click="toggleScheduledTerm(c.code, t.value)"
             >{{ t.label }}{{ t.tba ? ' TBA' : '' }}</button>
-            <span v-if="!(courseOfferings[c.code] || []).length" class="avail-none" title="Not offered in this range (or not yet published)">—</span>
+            <span v-if="!(courseOfferings[c.code] || []).length" class="avail-none">{{ scopePublished ? 'Not offered in this range' : 'Timetable not published yet' }}</span>
           </span>
         </div>
       </div>
