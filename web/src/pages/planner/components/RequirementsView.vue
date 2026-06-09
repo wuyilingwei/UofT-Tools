@@ -16,9 +16,9 @@ function tokenizeBlock(b) {
   return prereqTokens(text, getStatus)
 }
 
-// Click a course code to toggle planning: unset → Plan, Plan (or any) → unset.
+// Click a course code to cycle status: none → plan → taking → done → none.
 function reqToggle(code) {
-  setCourseStatus(code, getStatus(code) === 1 ? 0 : 1)
+  setCourseStatus(code, (getStatus(code) + 1) % 4)
 }
 
 const programsModel = computed(() => activePrograms.value.map(prog => {
@@ -64,7 +64,7 @@ const programsModel = computed(() => activePrograms.value.map(prog => {
               <!-- Requirement line with course codes -->
               <div v-else class="req-block" :class="{ indent: b.indent, met: b.met }">
                 <span class="req-status">{{ b.met ? '✓' : '○' }}</span>
-                <span class="req-text"><span v-if="b.lead" class="req-lead">{{ b.lead }} </span><template v-for="(t, ti) in b.tokens" :key="ti"><span v-if="t.course" class="prc-wrap"><span class="rc" :class="t.cls" title="Click to plan / unplan" @click="reqToggle(t.code)">{{ t.code }}</span><a class="code-link" style="font-size:9px" :href="'https://utm.calendar.utoronto.ca/course/' + t.code.toLowerCase()" target="_blank" title="Open course page" @click="$event.stopPropagation()">↗</a></span><template v-else>{{ t.text }}</template></template></span>
+                <span class="req-text"><span v-if="b.lead" class="req-lead">{{ b.lead }} </span><template v-for="(t, ti) in b.tokens" :key="ti"><span v-if="t.course" class="prc-wrap"><span class="rc" :class="t.cls" title="Click to cycle: none → plan → taking → done" @click="reqToggle(t.code)">{{ t.code }}</span><a class="code-link" style="font-size:9px" :href="'https://utm.calendar.utoronto.ca/course/' + t.code.toLowerCase()" target="_blank" title="Open course page" @click="$event.stopPropagation()">↗</a></span><template v-else>{{ t.text }}</template></template></span>
               </div>
             </template>
           </template>

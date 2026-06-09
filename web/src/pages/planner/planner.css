@@ -37,6 +37,7 @@
 .sidebar-search input{width:100%;padding:6px 10px;border:1px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none}
 .sidebar-search input:focus{border-color:var(--teal)}
 .section-list{overflow-y:auto;flex:1;position:relative}
+.section-list{flex:1;min-height:0;overflow-y:auto}
 .section-item{display:block;width:100%;text-align:left;padding:7px 14px;border:none;background:none;cursor:pointer;font-size:13px;color:var(--gray-800);border-left:3px solid transparent;transition:.1s;position:relative}
 .section-item:hover{background:var(--gray-100)}
 .section-item.active{background:#e8f4f8;border-left-color:var(--teal);color:var(--blue);font-weight:500}
@@ -81,9 +82,11 @@
 .stat-pending{background:#fff3cd;color:#856404}
 .stat-done{background:#d1fae5;color:#065f46}
 .stat-total{background:var(--gray-100);color:var(--gray-600)}
+.stat-planned{background:#dbeafe;color:#1d4ed8}
+.stat-taking{background:#fef9c3;color:#854d0e}
 
 .course-table{width:100%;border-collapse:collapse;font-size:13px}
-.course-table th{text-align:left;padding:7px 10px;background:var(--gray-50);border-bottom:2px solid var(--gray-200);font-weight:600;font-size:12px;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px}
+.course-table th{position:sticky;top:0;z-index:1;text-align:left;padding:7px 10px;background:var(--gray-50);border-bottom:2px solid var(--gray-200);font-weight:600;font-size:12px;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px}
 .course-table td{padding:6px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
 .course-table tr:hover td{background:var(--gray-50)}
 .course-table tr.done td{opacity:.55}

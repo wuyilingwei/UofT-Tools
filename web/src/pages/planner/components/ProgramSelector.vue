@@ -19,7 +19,10 @@ function onImport() {
   <div class="prog-header">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <h2>Selected Programs</h2>
-      <div style="font-size:11px;color:var(--gray-600)">Click a subject → add program</div>
+      <div class="data-btns" style="margin:0">
+        <button class="data-btn" @click="onExport">Export</button>
+        <button class="data-btn" @click="onImport">Import</button>
+      </div>
     </div>
 
     <div class="prog-list">
@@ -51,11 +54,6 @@ function onImport() {
         </template>
       </template>
       <span v-else-if="legality.success" style="color:var(--green)">✓ {{ legality.success }}</span>
-    </div>
-
-    <div class="data-btns" style="margin-top:4px">
-      <button class="data-btn" @click="onExport">⬇ Export</button>
-      <button class="data-btn" @click="onImport">⬆ Import</button>
     </div>
 
     <CoursePicker />

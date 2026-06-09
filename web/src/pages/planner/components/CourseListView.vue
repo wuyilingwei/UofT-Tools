@@ -37,9 +37,9 @@ const stats = computed(() => {
   const list = courseList.value
   return {
     total: list.length,
-    done: list.filter(c => getStatus(c.code) === 3).length,
-    progress: list.filter(c => getStatus(c.code) === 2).length,
     planned: list.filter(c => getStatus(c.code) === 1).length,
+    taking: list.filter(c => getStatus(c.code) === 2).length,
+    done: list.filter(c => getStatus(c.code) === 3).length,
   }
 })
 </script>
@@ -51,10 +51,10 @@ const stats = computed(() => {
 
   <template v-else>
     <div class="course-stats">
-      <span class="stat stat-total">📋 {{ stats.total }} total</span>
-      <span v-if="stats.planned" class="stat" style="background:#dbeafe;color:#1d4ed8">📅 {{ stats.planned }} planned</span>
-      <span v-if="stats.progress" class="stat" style="background:#fef9c3;color:#854d0e">📖 {{ stats.progress }} in progress</span>
-      <span class="stat stat-done">✓ {{ stats.done }} done</span>
+      <span class="stat stat-total">{{ stats.total }} total</span>
+      <span class="stat stat-planned">{{ stats.planned }} planned</span>
+      <span class="stat stat-taking">{{ stats.taking }} taking</span>
+      <span class="stat stat-done">{{ stats.done }} done</span>
     </div>
 
     <table class="course-table">
