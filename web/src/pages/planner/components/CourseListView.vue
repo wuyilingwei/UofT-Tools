@@ -64,9 +64,9 @@ const stats = computed(() => {
         <tr>
           <th class="c-status">Status</th>
           <th class="c-course">Course</th>
-          <th class="c-req">Required by</th>
-          <th>{{ state.courses ? 'Prereqs' : 'Year' }}</th>
-          <th v-if="state.courses">Year</th>
+          <th class="c-flex">Required by</th>
+          <th :class="{ 'c-flex': state.courses }">{{ state.courses ? 'Prereqs' : 'Year' }}</th>
+          <th v-if="state.courses" class="c-year">Year</th>
         </tr>
       </thead>
       <tbody>
@@ -85,7 +85,7 @@ const stats = computed(() => {
               :aria-label="'Exclusion conflict — you can only count one of ' + row.code + ' and ' + row.exclConflicts.join(', ')"
             >⊘<span class="excl-tip">Exclusion: you may only count one of <b>{{ row.code }}</b> and {{ row.exclConflicts.join(', ') }} toward your programs.</span></span>
           </td>
-          <td class="c-req">
+          <td class="c-flex">
             <div class="programs-tags">
               <template v-if="row.reqLabels.length">
                 <span v-for="l in row.reqLabels" :key="l" class="ptag" style="background:#f0f9ff;color:#007FA3">{{ l }}</span>
@@ -95,7 +95,7 @@ const stats = computed(() => {
               </template>
             </div>
           </td>
-          <td>
+          <td :class="{ 'c-flex': state.courses }">
             <template v-if="row.meta">
               <span v-if="row.prereq.none" class="prereq-none">—</span>
               <div v-else class="prereq-cell"><span v-if="row.prereq.met" class="prereq-met">✓</span><span v-else class="prereq-warn-icon">⚠</span>{{ ' ' }}<template v-for="(t, i) in row.prereq.tokens" :key="i"><span v-if="t.course" :class="t.cls" title="Click to cycle: None → Plan → Taking → Done" @click="cycleStatus(t.code)">{{ t.code }}</span><template v-else>{{ t.text }}</template></template></div>
@@ -105,7 +105,7 @@ const stats = computed(() => {
               <span v-else style="color:var(--gray-600)">—</span>
             </template>
           </td>
-          <td v-if="state.courses" style="color:var(--gray-600);font-size:12px">{{ row.year ? 'Y' + row.year : '—' }}</td>
+          <td v-if="state.courses" class="c-year" style="color:var(--gray-600);font-size:12px">{{ row.year ? 'Y' + row.year : '—' }}</td>
         </tr>
       </tbody>
     </table>

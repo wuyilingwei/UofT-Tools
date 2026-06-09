@@ -82,7 +82,7 @@
 .stat-planned{background:#dbeafe;color:#1d4ed8}
 .stat-taking{background:#fef9c3;color:#854d0e}
 
-.course-table{width:auto;max-width:100%;border-collapse:collapse;font-size:13px}
+.course-table{width:100%;border-collapse:collapse;font-size:13px}
 .course-table th{position:sticky;top:0;z-index:1;text-align:left;padding:7px 10px;background:var(--gray-50);border-bottom:2px solid var(--gray-200);font-weight:600;font-size:12px;color:var(--gray-600);text-transform:uppercase;letter-spacing:.3px}
 .course-table td{padding:6px 10px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
 .course-table tr:hover td{background:var(--gray-50)}
@@ -151,10 +151,9 @@
 .prereq-met{color:var(--green);font-weight:600;font-size:12px}
 .prereq-warn-icon{color:#856404;font-size:12px;flex-shrink:0}
 .prereq-none{color:var(--gray-600);font-size:12px}
-/* Shrink the status & course-code columns to their content instead of stretching. */
-.course-table th.c-status,.course-table td.c-status,.course-table th.c-course,.course-table td.c-course{width:1px;white-space:nowrap}
-/* Cap the Required-by column so its tags wrap instead of stretching the row. */
-.course-table td.c-req{max-width:240px}
+/* Shrink Status / Course / Year to their content; let Required-by & Prereqs share the rest. */
+.course-table th.c-status,.course-table td.c-status,.course-table th.c-course,.course-table td.c-course,.course-table th.c-year,.course-table td.c-year{width:1px;white-space:nowrap}
+.course-table th.c-flex,.course-table td.c-flex{width:50%}
 .excl-flag{position:relative;display:inline-block;color:var(--red);font-size:12px;margin-left:4px;cursor:help;outline:none}
 .excl-tip{display:none;position:absolute;left:50%;top:140%;transform:translateX(-50%);z-index:60;width:230px;white-space:normal;padding:7px 9px;font-size:11px;line-height:1.5;color:var(--gray-800);background:#fff;border:1px solid var(--gray-200);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.14)}
 .excl-flag:hover .excl-tip,.excl-flag:focus .excl-tip,.excl-flag:focus-within .excl-tip{display:block}
