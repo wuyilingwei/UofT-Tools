@@ -13,18 +13,17 @@ export function courseCredit(code) {
   return /Y\d$/i.test(code || '') ? 1.0 : 0.5
 }
 
-// Compact marker for a requirement section: a year (Y1/Y2/Y3/Y3+/Y4) or null.
+// Compact marker for a requirement section: a year (Y1/Y2/Y3+) or null.
+// Y3+ covers third year, fourth year, and "Higher Years".
 export function yearMarker(text) {
   const t = (text || '').toLowerCase()
-  if (/higher\s+year/.test(t)) return 'Y3+'
   if (/(first|1st)\s+year|year\s*1\b/.test(t)) return 'Y1'
   if (/(second|2nd)\s+year|year\s*2\b/.test(t)) return 'Y2'
-  if (/(third|3rd)\s+year|year\s*3\b/.test(t)) return 'Y3'
-  if (/(fourth|4th)\s+year|year\s*4\b/.test(t)) return 'Y4'
+  if (/higher\s+years?|(third|3rd|fourth|4th)\s+year|year\s*[34]\b/.test(t)) return 'Y3+'
   return null
 }
 
-const MARKER_ORDER = { Y1: 1, Y2: 2, Y3: 3, 'Y3+': 3.5, Y4: 4, Enrol: 9 }
+const MARKER_ORDER = { Y1: 1, Y2: 2, 'Y3+': 3, Enrol: 9 }
 function orderMarkers(arr) {
   return [...arr].sort((a, b) => (MARKER_ORDER[a] || 5) - (MARKER_ORDER[b] || 5))
 }
@@ -229,15 +228,32 @@ export function buildReqLine(groups, isSatisfied) {
 // only when the SUM of actual credits of the satisfied courses reaches the
 // stated amount (H = 0.5, Y = 1.0) — not merely when any one course is taken.
 // Otherwise: "or" lines need any code; other lines need every code.
-export function reqLineMet(block, isSatisfied) {
+// `ctx` (optional) supplies credit totals for thresholds that reference a wider
+// pool than the listed courses: ctx.poolCredits (satisfied credits in this
+// program) and ctx.totalCredits (all satisfied credits). When absent, such
+// broad credit thresholds are skipped (judged on the listed courses alone).
+export function reqLineMet(block, isSatisfied, ctx = {}) {
   const codes = block.codes || []
-  if (!codes.length) return null
   const text = block.text || ''
-  const m = text.match(/(\d+(?:\.\d+)?)\s*(?:additional\s+)?credits?\s+(?:from|of|in|at|toward)/i)
+  const m = text.match(/(\d+(?:\.\d+)?)\s*(?:additional\s+)?credits?\b/i)
   if (m) {
     const need = parseFloat(m[1])
-    const have = codes.filter(isSatisfied).reduce((n, c) => n + courseCredit(c), 0)
-    return have >= need - 1e-9
+    const listedMax = codes.reduce((n, c) => n + courseCredit(c), 0)
+    // Closed pool: the listed courses can themselves meet the credit amount.
+    if (codes.length && need <= listedMax + 1e-9) {
+      const have = codes.filter(isSatisfied).reduce((n, c) => n + courseCredit(c), 0)
+      return have >= need - 1e-9
+    }
+    // Broad threshold (e.g. "7.5 credits and …", "3.0 credits in X courses, which
+    // must include …"): check the credit total against the relevant pool, plus
+    // any explicitly listed "must include" courses.
+    const subjectPool = /credits?\b[^.]*\bcourses?\b/i.test(text) && /\b(in|of|from)\b/i.test(text)
+    const available = subjectPool ? ctx.poolCredits : ctx.totalCredits
+    const creditOk = available === undefined ? true : available >= need - 1e-9
+    if (!codes.length) return creditOk
+    const coursesOk = / or /i.test(text) ? codes.some(isSatisfied) : codes.every(isSatisfied)
+    return coursesOk && creditOk
   }
+  if (!codes.length) return null
   return / or /i.test(text) ? codes.some(isSatisfied) : codes.every(isSatisfied)
 }

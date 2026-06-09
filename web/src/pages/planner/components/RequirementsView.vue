@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
-import { activePrograms, getStatus, setCourseStatus, isSatisfied } from '../store.js'
-import { badgeClass, prereqTokens, reqLineMet } from '../lib/courses.js'
+import { activePrograms, getStatus, setCourseStatus, isSatisfied, degreeProgress } from '../store.js'
+import { badgeClass, prereqTokens, reqLineMet, courseCredit } from '../lib/courses.js'
 
 const KINDS = [
   ['enrolment', 'Enrolment Requirements'],
@@ -23,13 +23,17 @@ function reqToggle(code) {
 
 const programsModel = computed(() => activePrograms.value.map(prog => {
   const rg = prog.requirementGroups || {}
+  // Credit context for thresholds that reference a wider pool than the listed
+  // courses: credits satisfied within this program, and overall.
+  const poolCredits = (prog.courses || []).filter(isSatisfied).reduce((n, c) => n + courseCredit(c), 0)
+  const ctx = { poolCredits, totalCredits: degreeProgress.value.total }
   const kinds = []
   for (const [key, label] of KINDS) {
     const blocks = rg[key]?.blocks || []
     if (!blocks.length) continue
     kinds.push({
       label,
-      blocks: blocks.map(b => ({ ...b, met: reqLineMet(b, isSatisfied), tokens: tokenizeBlock(b) })),
+      blocks: blocks.map(b => ({ ...b, met: reqLineMet(b, isSatisfied, ctx), tokens: tokenizeBlock(b) })),
     })
   }
   return { prog, hasReqs: kinds.length > 0, kinds }
