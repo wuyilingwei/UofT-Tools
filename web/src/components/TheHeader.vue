@@ -1,9 +1,6 @@
 <script setup>
 const links = [
   { to: '/', label: 'Home' },
-  { to: '/calendar', label: 'Calendar' },
-  { to: '/planner', label: 'Planner' },
-  { to: '/faq', label: 'FAQ' },
 ]
 </script>
 
