@@ -4,6 +4,7 @@ import {
   state, filteredSections, popupSection, selectSection, toggleProgram,
 } from '../store.js'
 import { badgeClass } from '../lib/courses.js'
+import SuggestionBar from './SuggestionBar.vue'
 
 const sidebarEl = ref(null)
 
@@ -20,10 +21,6 @@ const isSelected = (id) => state.selectedPrograms.some(p => p.id === id)
 
 <template>
   <aside ref="sidebarEl" class="sidebar">
-    <div class="sidebar-search">
-      <input v-model="state.sectionFilter" type="text" placeholder="Search subjects…">
-    </div>
-
     <div class="section-list">
       <button
         v-for="s in filteredSections"
@@ -33,6 +30,8 @@ const isSelected = (id) => state.selectedPrograms.some(p => p.id === id)
         @click="onSelect(s.slug, $event)"
       >{{ s.name || s.slug.replace(/-/g, ' ') }}</button>
     </div>
+
+    <SuggestionBar />
 
     <div class="sidebar-popup" :class="{ open: state.popupOpen }" :style="{ top: state.popupTop + 'px' }">
       <template v-if="!state.activeSectionSlug || !state.programs">

@@ -6,7 +6,6 @@ import ProgramSidebar from './components/ProgramSidebar.vue'
 import ProgramSelector from './components/ProgramSelector.vue'
 import CourseListView from './components/CourseListView.vue'
 import RequirementsView from './components/RequirementsView.vue'
-import SuggestionBar from './components/SuggestionBar.vue'
 import ScheduleBuilder from './components/ScheduleBuilder.vue'
 import ScheduleBoard from './components/ScheduleBoard.vue'
 
@@ -55,8 +54,6 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
             <RequirementsView v-else />
           </template>
         </div>
-
-        <SuggestionBar />
       </div>
     </div>
 
