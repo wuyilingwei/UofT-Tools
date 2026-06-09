@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import './planner.css'
 import { state, init, syncScheduledCourses, closePopup } from './store.js'
 import ProgramSidebar from './components/ProgramSidebar.vue'
@@ -9,9 +9,12 @@ import RequirementsView from './components/RequirementsView.vue'
 import ScheduleBuilder from './components/ScheduleBuilder.vue'
 import ScheduleBoard from './components/ScheduleBoard.vue'
 
+const sidebarOpen = ref(false)
+
 function switchTab(tab) {
   state.activeTab = tab
   if (tab === 'schedule') syncScheduledCourses()
+  sidebarOpen.value = false
 }
 
 // Close the program popup when clicking outside the sidebar.
@@ -34,7 +37,11 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 
     <!-- Program Planner -->
     <div class="tab-panel" :class="{ active: state.activeTab === 'planner' }">
-      <ProgramSidebar />
+      <div class="mob-bar">
+        <button class="mob-sidebar-btn" @click="sidebarOpen = !sidebarOpen">☰ Programs</button>
+      </div>
+      <div v-if="sidebarOpen" class="mob-backdrop" @click="sidebarOpen = false" />
+      <ProgramSidebar :class="{ 'mob-open': sidebarOpen }" />
 
       <div class="main">
         <ProgramSelector />

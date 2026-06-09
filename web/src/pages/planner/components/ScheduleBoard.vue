@@ -63,4 +63,7 @@ const canNavigate = computed(() => state.scheduleView !== 'friend')
 }
 .alt-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
 .alt-btn:disabled { opacity: .4; cursor: default; }
+@media (max-width: 640px) {
+  .term-cols { flex-direction: column; }
+}
 </style>
