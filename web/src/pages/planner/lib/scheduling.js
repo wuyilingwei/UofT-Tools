@@ -174,54 +174,105 @@ function scheduleScore(results, { freeDays, busyDays, time, density }) {
   return score
 }
 
-// Enumerate every LEC×TUT combination across the courses, then rank: fewest
-// conflicts first, then best preference score. This guarantees a conflict-free
-// arrangement is chosen whenever one exists (preferences never force a clash),
-// and exposes the ranked alternatives for the user to step through.
-export function rankedSchedules(timetable, codes, prefs, limit = 5000, keep = 50) {
+// Find conflict-free schedules by backtracking, then rank them by preference.
+// Crucially, feasibility (avoiding conflicts) is decided WITHOUT regard to
+// preferences — preferences only order/rank the conflict-free results — so no
+// preference can ever cause a conflict. Only when NO conflict-free arrangement
+// exists do we fall back to a single best-effort (minimum-conflict) option.
+export function rankedSchedules(timetable, codes, prefs, keep = 50, nodeBudget = 400000) {
+  const zzOverlap = prefs.zzOverlap !== false
+  const zzWithReg = prefs.zzWithReg === true
   const lookup = new Map()
   for (const c of timetable.courses) if (!lookup.has(c.code)) lookup.set(c.code, c)
   const colorMap = {}
   let ci = 0
   for (const code of codes) if (!colorMap[code]) colorMap[code] = COLORS[ci++ % COLORS.length]
 
+  const optionTimes = (sections) => {
+    const out = []
+    for (const sec of sections) for (const t of sec.times) if (t.day) out.push({ day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ' })
+    return out
+  }
+  // Per-course options (LEC × TUT), pre-scored and sorted best-preference first.
   const per = codes.map(code => {
     const entry = lookup.get(code)
-    if (!entry) return { code, missing: true, opts: [[]] }
+    if (!entry) return { code, missing: true, opts: [{ sections: [], times: [] }] }
     const lecs = entry.sections.filter(s => s.type === 'LEC' || s.type === 'ASYNC')
     const tuts = entry.sections.filter(s => s.type === 'TUT' || s.type === 'PRA')
     const L = lecs.length ? lecs.map(s => [s]) : [[]]
     const T = tuts.length ? tuts.map(s => [s]) : [[]]
     const opts = []
-    for (const l of L) for (const t of T) opts.push([...l, ...t])
+    for (const l of L) for (const t of T) {
+      const sections = [...l, ...t]
+      opts.push({ sections, times: optionTimes(sections), score: sections.reduce((s, sec) => s + scoreSec(sec, prefs.freeDays, prefs.busyDays, prefs.density, prefs.time, []), 0) })
+    }
+    opts.sort((a, b) => b.score - a.score)
     return { code, name: entry.name, opts }
   })
 
-  // Cap the search: if the product is too large, keep each course's best few options.
-  const product = () => per.reduce((n, p) => n * p.opts.length, 1)
-  if (product() > limit) {
-    for (const p of per) {
-      if (p.missing) continue
-      p.opts = p.opts
-        .map(o => ({ o, s: o.reduce((sum, sec) => sum + scoreSec(sec, prefs.freeDays, prefs.busyDays, prefs.density, prefs.time, []), 0) }))
-        .sort((a, b) => b.s - a.s).slice(0, 3).map(x => x.o)
+  const overlaps = (a, b) => a.day === b.day && a.startMs < b.endMs && a.endMs > b.startMs
+  const pairConflict = (a, b) => {
+    if (!overlaps(a, b)) return false
+    if (a.zz && b.zz) return !zzOverlap
+    if (a.zz || b.zz) return !zzWithReg
+    return true
+  }
+  const hits = (times, placed) => {
+    for (const t of times) for (const p of placed) if (pairConflict(t, p)) return true
+    return false
+  }
+  const buildResults = (pick) => per.map((p, i) => p.missing
+    ? { code: p.code, name: 'Not in timetable', sections: [], color: colorMap[p.code], missing: true }
+    : { code: p.code, name: p.name, sections: [...pick[i].sections], color: colorMap[p.code], conflict: false })
+
+  // Most-constrained course first → prune earlier.
+  const order = per.map((_, i) => i).sort((a, b) => per[a].opts.length - per[b].opts.length)
+
+  const found = []
+  let nodes = 0
+  const placed = []
+  const chosen = new Array(per.length)
+  const backtrack = (k) => {
+    if (found.length >= keep || nodes > nodeBudget) return
+    if (k === order.length) { found.push(chosen.slice()); return }
+    nodes++
+    for (const opt of per[order[k]].opts) {
+      if (hits(opt.times, placed)) continue
+      for (const t of opt.times) placed.push(t)
+      chosen[order[k]] = opt
+      backtrack(k + 1)
+      for (let n = 0; n < opt.times.length; n++) placed.pop()
+      if (found.length >= keep || nodes > nodeBudget) return
     }
   }
+  backtrack(0)
 
-  const out = []
-  const idx = new Array(per.length).fill(0)
-  const combos = Math.min(product(), limit)
-  for (let n = 0; n < combos; n++) {
-    const results = per.map((p, i) => p.missing
-      ? { code: p.code, name: 'Not in timetable', sections: [], color: colorMap[p.code], missing: true }
-      : { code: p.code, name: p.name, sections: [...p.opts[idx[i]]], color: colorMap[p.code], conflict: false })
-    markConflicts(results, prefs)
-    const conflicts = results.filter(r => r.conflict).length
-    out.push({ results, conflicts, score: scheduleScore(results, prefs) })
-    for (let i = per.length - 1; i >= 0; i--) { idx[i]++; if (idx[i] < per[i].opts.length) break; idx[i] = 0 }
+  if (found.length) {
+    const ranked = found.map(pick => {
+      const results = buildResults(pick)
+      markConflicts(results, prefs)
+      return { results, conflicts: 0, score: scheduleScore(results, prefs) }
+    })
+    ranked.sort((a, b) => b.score - a.score)
+    return ranked
   }
-  out.sort((a, b) => a.conflicts - b.conflicts || b.score - a.score)
-  return out.slice(0, keep)
+
+  // No conflict-free arrangement exists: greedy minimum-conflict, best preference as tiebreak.
+  const pick = new Array(per.length)
+  const placedG = []
+  for (const k of order) {
+    const p = per[k]
+    let best = p.opts[0], bestConf = Infinity, bestScore = -Infinity
+    for (const opt of p.opts) {
+      const conf = opt.times.reduce((n, t) => n + placedG.filter(pt => pairConflict(t, pt)).length, 0)
+      if (conf < bestConf || (conf === bestConf && opt.score > bestScore)) { best = opt; bestConf = conf; bestScore = opt.score }
+    }
+    pick[k] = best
+    for (const t of best.times) placedG.push(t)
+  }
+  const results = buildResults(pick)
+  markConflicts(results, prefs)
+  return [{ results, conflicts: results.filter(r => r.conflict).length, score: scheduleScore(results, prefs) }]
 }
 
 // Time blocks occupied by a set of scheduled results.
