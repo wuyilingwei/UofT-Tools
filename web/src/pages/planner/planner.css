@@ -320,8 +320,14 @@
   /* Summary: 2×2 grid */
   .summary{display:grid;grid-template-columns:1fr 1fr}
 
-  /* Schedule panel: controls on top, grid below */
-  #schedule-panel{flex-direction:column}
-  .sched-controls{width:100% !important;border-right:none;border-bottom:1px solid var(--gray-200);overflow-y:visible}
-  .grid-area{padding:10px}
+  /* Status picker: 2×2 grid (4 buttons → 2 rows × 2 cols) */
+  .sp{display:grid;grid-template-columns:1fr 1fr}
+  .sp-b{border-right:1px solid var(--gray-200) !important;border-bottom:1px solid var(--gray-200) !important}
+  .sp-b:nth-child(even){border-right:none !important}
+  .sp-b:nth-child(n+3){border-bottom:none !important}
+
+  /* Schedule panel: scroll vertically (body is overflow:hidden, so panel must self-scroll) */
+  #schedule-panel{flex-direction:column;overflow-y:auto}
+  .sched-controls{width:100% !important;flex-shrink:0;border-right:none;border-bottom:1px solid var(--gray-200);overflow-y:visible}
+  .grid-area{padding:10px;flex-shrink:0}
 }
