@@ -219,10 +219,14 @@
 .seg-req{color:var(--gray-400)}
 .sum-block.bd-done{border-color:#86efac;background:#f0fdf4}
 .sum-block.bd-done .sum-head{color:#15803d}
-.sum-block.bd-taking{border-color:#fcd34d;background:#fffbeb}
-.sum-block.bd-taking .sum-head{color:#92400e}
+.sum-block.bd-taking{border-color:#fde047;background:#fef9c3}
+.sum-block.bd-taking .sum-head{color:#854d0e}
 .sum-block.bd-planned{border-color:#bfdbfe;background:#eff6ff}
 .sum-block.bd-planned .sum-head{color:#1d4ed8}
+.deg-toggle{display:inline-flex;gap:2px;margin-left:6px;vertical-align:middle}
+.deg-btn{padding:1px 7px;border:1px solid var(--gray-200);border-radius:10px;background:#fff;font-size:10px;font-weight:500;cursor:pointer;color:var(--gray-500);transition:.1s;text-transform:none;letter-spacing:0}
+.deg-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.deg-btn:hover:not(.active){border-color:var(--gray-400);color:var(--gray-700)}
 .sum-disclaimer{margin-top:4px;font-size:10px;font-style:italic;color:var(--gray-500);line-height:1.4}
 .summary .met{color:var(--green);font-weight:600}
 .summary .met::after{content:' ✓'}
