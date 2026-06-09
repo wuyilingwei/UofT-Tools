@@ -134,14 +134,14 @@ function onImport() {
         <div class="sum-line"><span :class="{ met: degreeProgress.cats.Science >= 1 }">Science: {{ fmt(degreeProgress.cats.Science) }} / 1.0</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">Social Science: {{ fmt(degreeProgress.cats['Social Science']) }} / 1.0</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.cats.Humanities >= 1 }">Humanities: {{ fmt(degreeProgress.cats.Humanities) }} / 1.0</span></div>
-        <div class="sum-breakdown">P:{{ fmt(degreeBreakdown.planned.total) }} · T:{{ fmt(degreeBreakdown.taking.total) }} · D:{{ fmt(degreeBreakdown.done.total) }}</div>
+        <div class="sum-breakdown"><span class="seg-planned">{{ fmt(degreeBreakdown.planned.total) }}</span>/<span class="seg-taking">{{ fmt(degreeBreakdown.taking.total) }}</span>/<span class="seg-done">{{ fmt(degreeBreakdown.done.total) }}</span>/<span class="seg-req">1.0 each</span></div>
       </div>
 
       <!-- 3. Ordinary degree -->
       <div class="sum-block" :class="[degreeProgress.total >= 15 ? 'done' : '', ordinaryBorder]">
         <div class="sum-head">Ordinary Degree</div>
         <div class="sum-line"><span :class="{ met: degreeProgress.total >= 15 }">Total: {{ fmt(degreeProgress.total) }} / 15.0 cr</span></div>
-        <div class="sum-breakdown">P:{{ fmt(degreeBreakdown.planned.total) }} · T:{{ fmt(degreeBreakdown.taking.total) }} · D:{{ fmt(degreeBreakdown.done.total) }}</div>
+        <div class="sum-breakdown"><span class="seg-planned">{{ fmt(degreeBreakdown.planned.total) }}</span>/<span class="seg-taking">{{ fmt(degreeBreakdown.taking.total) }}</span>/<span class="seg-done">{{ fmt(degreeBreakdown.done.total) }}</span>/<span class="seg-req">15.0</span></div>
       </div>
 
       <!-- 4. Honours degree -->
@@ -150,14 +150,14 @@ function onImport() {
         <div class="sum-line"><span :class="{ met: degreeProgress.total >= 20 }">Total: {{ fmt(degreeProgress.total) }} / 20.0 cr</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.upper2 >= 13 }">200+ level: {{ fmt(degreeProgress.upper2) }} / 13.0</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.upper >= 6 }">300/400 level: {{ fmt(degreeProgress.upper) }} / 6.0</span></div>
-        <div class="sum-breakdown">P:{{ fmt(degreeBreakdown.planned.total) }} · T:{{ fmt(degreeBreakdown.taking.total) }} · D:{{ fmt(degreeBreakdown.done.total) }}</div>
+        <div class="sum-breakdown"><span class="seg-planned">{{ fmt(degreeBreakdown.planned.total) }}</span>/<span class="seg-taking">{{ fmt(degreeBreakdown.taking.total) }}</span>/<span class="seg-done">{{ fmt(degreeBreakdown.done.total) }}</span>/<span class="seg-req">20.0</span></div>
       </div>
 
       <!-- 5. Projected outcome -->
       <div class="sum-block outlook" :class="{ done: outlookNow.ordinary || outlookNow.honours || outlookPlan.ordinary || outlookPlan.honours }">
         <div class="sum-head">Projected Outcome</div>
-        <div class="sum-line">Current (Done + Taking): <b>{{ nowText }}</b></div>
-        <div class="sum-line">Projected (+ Planned): <b>{{ planText }}</b></div>
+        <div class="sum-line">Current: <b>{{ nowText }}</b></div>
+        <div class="sum-line">Projected: <b>{{ planText }}</b></div>
         <div class="sum-disclaimer">Estimate only — other requirements (cGPA, etc.) not checked.</div>
       </div>
     </div>
