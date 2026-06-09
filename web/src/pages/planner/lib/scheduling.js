@@ -179,7 +179,9 @@ function scheduleScore(results, { freeDays, busyDays, time, density }) {
 // preferences — preferences only order/rank the conflict-free results — so no
 // preference can ever cause a conflict. Only when NO conflict-free arrangement
 // exists do we fall back to a single best-effort (minimum-conflict) option.
-export function rankedSchedules(timetable, codes, prefs, keep = 50, nodeBudget = 400000) {
+// `keep` is a high safety bound, not a feature limit — with a handful of courses
+// the number of conflict-free arrangements is small and all of them are returned.
+export function rankedSchedules(timetable, codes, prefs, keep = 5000, nodeBudget = 2000000) {
   const zzOverlap = prefs.zzOverlap !== false
   const zzWithReg = prefs.zzWithReg === true
   const lookup = new Map()
