@@ -157,9 +157,11 @@ function scheduleScore(results, { freeDays, busyDays, time, density }) {
   let score = 0
   const days = new Set()
   for (const r of results) {
+    let hasTime = false
     for (const sec of (r.sections || [])) {
       for (const t of sec.times) {
         if (!t.day) continue
+        hasTime = true
         days.add(t.day)
         if (freeDays.includes(t.day)) score -= 25
         if (busyDays.includes(t.day)) score += 20
@@ -168,6 +170,9 @@ function scheduleScore(results, { freeDays, busyDays, time, density }) {
         if (time === 'afternoon' && hr < 12) score -= 15
       }
     }
+    // Strongly prefer a section with actual meeting times over a no-time
+    // placeholder (which would otherwise be picked just for avoiding conflicts).
+    if ((r.sections || []).length && !hasTime) score -= 1000
   }
   if (density === 'compact') score += (5 - days.size) * 10   // fewer distinct days
   else if (density === 'spread') score += days.size * 10      // more distinct days
