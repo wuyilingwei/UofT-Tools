@@ -62,7 +62,7 @@ const stats = computed(() => {
     <table class="course-table">
       <thead>
         <tr>
-          <th>Status</th>
+          <th class="c-status">Status</th>
           <th class="c-course">Course</th>
           <th>Required by</th>
           <th>{{ state.courses ? 'Prereqs' : 'Year' }}</th>
@@ -71,7 +71,7 @@ const stats = computed(() => {
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.code" :class="row.rowCls">
-          <td>
+          <td class="c-status">
             <div class="sp">
               <button class="sp-b" :class="{ 's-none': getStatus(row.code) === 0 }" @click="setCourseStatus(row.code, 0)">None</button>
               <button class="sp-b" :class="{ 's-planned': getStatus(row.code) === 1 }" @click="setCourseStatus(row.code, 1)">Plan</button>
