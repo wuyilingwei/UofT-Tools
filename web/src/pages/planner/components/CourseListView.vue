@@ -64,7 +64,7 @@ const stats = computed(() => {
         <tr>
           <th class="c-status">Status</th>
           <th class="c-course">Course</th>
-          <th>Required by</th>
+          <th class="c-req">Required by</th>
           <th>{{ state.courses ? 'Prereqs' : 'Year' }}</th>
           <th v-if="state.courses">Year</th>
         </tr>
@@ -85,7 +85,7 @@ const stats = computed(() => {
               :aria-label="'Exclusion conflict — you can only count one of ' + row.code + ' and ' + row.exclConflicts.join(', ')"
             >⊘<span class="excl-tip">Exclusion: you may only count one of <b>{{ row.code }}</b> and {{ row.exclConflicts.join(', ') }} toward your programs.</span></span>
           </td>
-          <td>
+          <td class="c-req">
             <div class="programs-tags">
               <template v-if="row.reqLabels.length">
                 <span v-for="l in row.reqLabels" :key="l" class="ptag" style="background:#f0f9ff;color:#007FA3">{{ l }}</span>
