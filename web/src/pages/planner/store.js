@@ -107,6 +107,25 @@ export const availability = computed(() => {
   return scope ? buildCourseAvailability(badgeTerms(scope), state.timetables) : {}
 })
 
+// Codes offered in the current scope but with NO weekday meeting time in any of
+// its timetables (TBA) — surfaced as a badge in the picker rather than a board note.
+export const tbaCourses = computed(() => {
+  const scope = currentScope.value
+  if (!scope) return new Set()
+  const timed = new Map()  // code → has any meeting time across the scope
+  for (const term of badgeTerms(scope)) {
+    const tt = state.timetables[term.value]
+    if (!tt || !tt.courses) continue
+    for (const c of tt.courses) {
+      const has = (c.sections || []).some(s => (s.times || []).some(t => t.day >= 1 && t.day <= 5 && t.endMs > t.startMs))
+      timed.set(c.code, (timed.get(c.code) || false) || has)
+    }
+  }
+  const out = new Set()
+  for (const [code, has] of timed) if (!has) out.add(code)
+  return out
+})
+
 export const scheduleSelection = computed(() => ({
   courses: [...state.scheduledCourses],
   friendEnabled: state.friend.enabled,

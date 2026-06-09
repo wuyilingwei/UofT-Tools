@@ -1,6 +1,6 @@
 <script setup>
 import {
-  state, pendingCourses, scopes, availability, courseConflictHints,
+  state, pendingCourses, scopes, availability, courseConflictHints, tbaCourses,
   onScopeChange, toggleScheduledCourse,
   toggleFriend, addFriendCourse, removeFriendCourse,
 } from '../store.js'
@@ -84,6 +84,7 @@ const DAYS = [
               class="avail-badge"
               :class="{ full: /Full/.test(t) }"
             >{{ t }}</span>
+            <span v-if="tbaCourses.has(c.code)" class="avail-badge tba" title="Offered, but no meeting times posted yet (TBA)">TBA</span>
             <span v-if="!(availability[c.code] || []).length" class="avail-none" title="Not offered in this range (or not yet published)">—</span>
           </span>
           <span v-if="courseConflictHints[c.code]" class="conflict-badge">
@@ -118,6 +119,7 @@ const DAYS = [
   background: #e8f4f8; color: var(--teal); white-space: nowrap;
 }
 .avail-badge.full { background: #fef3c7; color: #92400e; }
+.avail-badge.tba { background: #f3f4f6; color: #6b7280; }
 .avail-none { font-size: 10px; color: var(--gray-400); }
 .conflict-badge {
   grid-column: 1 / -1; margin-left: 22px; font-size: 10px; color: var(--red); font-weight: 600; line-height: 1.4;
