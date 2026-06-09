@@ -1,5 +1,5 @@
 import { reactive, computed, watch } from 'vue'
-import { buildCourseList, computeLegality, computeSuggestions } from './lib/courses.js'
+import { buildCourseList, computeLegality, computeSuggestions, courseCredit, computeDistribution } from './lib/courses.js'
 import {
   buildSchedule, buildScopes, buildPairSchedule,
   buildCourseAvailability, analyzeCourseConflicts, badgeTerms,
@@ -72,6 +72,29 @@ export const popupSection = computed(() =>
 )
 // Only courses explicitly marked "Plan" (status 1) are schedulable / shown on the board.
 export const pendingCourses = computed(() => courseList.value.filter(c => getStatus(c.code) === 1))
+
+// Codes that belong to a selected program (used to tell apart "outside" courses).
+export const programCourseCodes = computed(() => {
+  const s = new Set()
+  for (const p of state.selectedPrograms) for (const c of (p.courses || [])) s.add(c)
+  return s
+})
+
+// Courses marked Plan/Taking/Done that aren't part of any selected program —
+// always shown (locked) in the picker so the student doesn't lose track of them.
+export const lockedExtraCourses = computed(() => {
+  const inProg = programCourseCodes.value
+  return Object.keys(state.courseStatus)
+    .filter(c => state.courseStatus[c] >= 1 && !inProg.has(c))
+    .sort()
+})
+
+// UTM degree progress (total credits + Sci/SSc/Hum distribution) over every
+// course the student has marked Plan/Taking/Done.
+export const degreeProgress = computed(() => {
+  const codes = Object.keys(state.courseStatus).filter(c => state.courseStatus[c] >= 1)
+  return computeDistribution(codes, courseCredit, c => state.courses?.[c]?.distribution || '')
+})
 
 // ── Scheduling scopes / availability ──
 export const scopes = computed(() => buildScopes(state.sessions))

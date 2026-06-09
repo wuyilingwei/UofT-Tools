@@ -1,5 +1,5 @@
 <script setup>
-import { state, legality, toggleProgram, toggleIntention, applyImported } from '../store.js'
+import { state, legality, degreeProgress, toggleProgram, toggleIntention, applyImported } from '../store.js'
 import { chipClass } from '../lib/courses.js'
 import { exportPlanner, importPlanner } from '../lib/dataio.js'
 import CoursePicker from './CoursePicker.vue'
@@ -54,6 +54,14 @@ function onImport() {
         </template>
       </template>
       <span v-else-if="legality.success" style="color:var(--green)">✓ {{ legality.success }}</span>
+    </div>
+
+    <div class="degree-progress" title="Counts courses you marked Plan / Taking / Done">
+      <span class="dp-total">{{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span>
+      <span class="dp-cat" :class="{ met: degreeProgress.cats.Science >= 1 }">Sci {{ degreeProgress.cats.Science.toFixed(1) }}</span>
+      <span class="dp-cat" :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">SSc {{ degreeProgress.cats['Social Science'].toFixed(1) }}</span>
+      <span class="dp-cat" :class="{ met: degreeProgress.cats.Humanities >= 1 }">Hum {{ degreeProgress.cats.Humanities.toFixed(1) }}</span>
+      <span class="dp-hint">distribution needs ≥1.0 in each</span>
     </div>
 
     <CoursePicker />

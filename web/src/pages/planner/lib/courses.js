@@ -131,11 +131,31 @@ export function computeLegality(active) {
 
   const nS = s.length, nM = m.length, nMi = mi.length
   let v = ''
-  if (nS === 1 && nM === 0 && nMi <= 2) v = `1 specialist${nMi ? ' + ' + nMi + ' minor(s)' : ''} ✓`
-  else if (nS === 0 && nM === 1 && nMi <= 2) v = `1 major${nMi ? ' + ' + nMi + ' minor(s)' : ''} ✓`
-  else if (nS === 0 && nM === 2 && nMi <= 1) v = `2 majors${nMi ? ' + ' + nMi + ' minor(s)' : ''} ✓`
-  else if (burden >= 4) v = 'Valid combination ✓'
+  if (nS === 1 && nM === 0 && nMi <= 2) v = `1 specialist${nMi ? ' + ' + nMi + ' minor(s)' : ''}`
+  else if (nS === 0 && nM === 1 && nMi <= 2) v = `1 major${nMi ? ' + ' + nMi + ' minor(s)' : ''}`
+  else if (nS === 0 && nM === 2 && nMi <= 1) v = `2 majors${nMi ? ' + ' + nMi + ' minor(s)' : ''}`
+  else if (burden >= 4) v = 'Valid combination'
   return { messages: [], success: v }
+}
+
+// UTM degree progress from a set of course codes: total credits + the
+// Distribution Requirement (≥1.0 credit in each of Humanities / Sciences /
+// Social Sciences). `creditOf(code)` → credit weight; `distOf(code)` → category.
+export const DEGREE_CREDITS = 20.0
+export const DIST_CATEGORIES = ['Science', 'Social Science', 'Humanities']
+export const DIST_MIN = 1.0
+
+export function computeDistribution(codes, creditOf, distOf) {
+  const cats = { Science: 0, 'Social Science': 0, Humanities: 0 }
+  let total = 0
+  for (const code of codes) {
+    const cr = creditOf(code)
+    total += cr
+    const d = distOf(code)
+    if (cats[d] !== undefined) cats[d] += cr
+  }
+  const metCount = DIST_CATEGORIES.filter(c => cats[c] >= DIST_MIN).length
+  return { total, cats, metCount, satisfied: metCount === DIST_CATEGORIES.length }
 }
 
 // Jaccard-overlap based program suggestions.

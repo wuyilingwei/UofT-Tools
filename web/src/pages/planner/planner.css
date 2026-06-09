@@ -181,6 +181,12 @@
 .course-table tr.s-planned td{background:#eff6ff}
 
 /* ── Data import/export ── */
+.degree-progress{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px;font-size:11px}
+.degree-progress .dp-total{font-weight:700;color:var(--gray-700);background:var(--gray-100);padding:2px 8px;border-radius:10px}
+.degree-progress .dp-cat{padding:2px 7px;border-radius:10px;font-weight:600;background:#fff5f5;color:#b91c1c;border:1px solid #fecaca}
+.degree-progress .dp-cat.met{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.degree-progress .dp-cat.met::after{content:' ✓'}
+.degree-progress .dp-hint{color:var(--gray-500);font-style:italic}
 .data-btns{display:flex;gap:6px;margin-top:6px}
 .data-btn{padding:3px 9px;border:1px solid var(--gray-200);border-radius:5px;background:#fff;font-size:11px;cursor:pointer;color:var(--gray-600);transition:.1s}
 .data-btn:hover{border-color:var(--teal);color:var(--teal)}
