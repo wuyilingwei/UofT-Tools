@@ -120,7 +120,7 @@
 .day-check input{cursor:pointer}
 .course-picks{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
 /* Higher specificity than `.sched-controls label{display:block}` so the row actually lays out. */
-.course-picks .course-pick{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:6px;margin:0;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;font-weight:400;text-transform:none;letter-spacing:normal;color:var(--gray-800);cursor:pointer;transition:.1s}
+.course-picks .course-pick{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;margin:0;padding:5px 8px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;font-size:12px;font-weight:400;text-transform:none;letter-spacing:normal;color:var(--gray-800);transition:.1s}
 .course-pick.selected{background:#e8f4f8;border-color:var(--teal)}
 .course-pick.conflict{background:#fff5f5;border-color:#f5b5b5}
 .course-pick input[type=checkbox]{cursor:pointer}

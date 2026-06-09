@@ -47,7 +47,7 @@ export const state = reactive({
   prefs: { density: 'compact', time: 'any', freeDays: [], busyDays: [] },
   scopeId: '',                 // selected scheduling scope (see lib/scheduling buildScopes)
   timetables: {},              // sessionValue → timetable data (lazy cache)
-  scheduledCourses: [],        // your courses to schedule
+  scheduled: {},               // code → [termValue,…] : which segment(s) to schedule per course
   board: [],                   // [{value,label,results,published}] — your schedule per term
   friend: { enabled: false, courses: [] },  // friend co-scheduling (Phase E)
   friendBoard: [],             // friend's schedule per term
@@ -126,8 +126,30 @@ export const tbaCourses = computed(() => {
   return out
 })
 
+// Per-course term offerings in the current scope → the pills shown in the picker.
+//   { code: [{ value, label }, …] }
+export const courseOfferings = computed(() => {
+  const scope = currentScope.value
+  if (!scope) return {}
+  const map = {}
+  for (const term of badgeTerms(scope)) {
+    const tt = state.timetables[term.value]
+    if (!tt || !tt.courses) continue
+    for (const c of tt.courses) {
+      if (!map[c.code]) map[c.code] = []
+      if (!map[c.code].some(t => t.value === term.value)) map[c.code].push({ value: term.value, label: term.label })
+    }
+  }
+  return map
+})
+
+// Codes scheduled in at least one segment.
+export const scheduledCodes = computed(() =>
+  Object.keys(state.scheduled).filter(c => (state.scheduled[c] || []).length),
+)
+
 export const scheduleSelection = computed(() => ({
-  courses: [...state.scheduledCourses],
+  scheduled: JSON.parse(JSON.stringify(state.scheduled)),
   friendEnabled: state.friend.enabled,
   friendCourses: [...state.friend.courses],
   scopeId: state.scopeId,
@@ -140,7 +162,7 @@ export const courseConflictHints = computed(() => {
   return analyzeCourseConflicts(
     scope.terms,
     state.timetables,
-    state.scheduledCourses,
+    scheduledCodes.value,
     prefsObj(),
     pendingCourses.value.map(c => c.code),
     scope.full,
@@ -258,19 +280,30 @@ export function applyImported(data) {
 }
 
 // ── Schedule ──
-export function toggleScheduledCourse(code, checked) {
-  if (checked) {
-    if (!state.scheduledCourses.includes(code)) state.scheduledCourses.push(code)
+export function isScheduledIn(code, termValue) {
+  return (state.scheduled[code] || []).includes(termValue)
+}
+
+// Toggle scheduling a course in one term segment (a pill in the picker).
+export function toggleScheduledTerm(code, termValue) {
+  const cur = state.scheduled[code] || []
+  if (cur.includes(termValue)) {
+    const next = cur.filter(v => v !== termValue)
+    if (next.length) state.scheduled[code] = next
+    else delete state.scheduled[code]
   } else {
-    state.scheduledCourses = state.scheduledCourses.filter(c => c !== code)
+    state.scheduled[code] = [...cur, termValue]
   }
   queueScheduleRefresh()
 }
 
 // Prune deselected/completed courses; called when entering the schedule tab.
+// Term-segment choices are kept (a course may be scheduled under another scope).
 export function syncScheduledCourses() {
-  const pending = pendingCourses.value
-  state.scheduledCourses = state.scheduledCourses.filter(c => pending.find(p => p.code === c))
+  const pending = new Set(pendingCourses.value.map(p => p.code))
+  for (const code of Object.keys(state.scheduled)) {
+    if (!pending.has(code)) delete state.scheduled[code]
+  }
   queueScheduleRefresh()
 }
 
@@ -322,15 +355,20 @@ function prefsObj() {
   }
 }
 
-// Build the per-term schedule for a given course set against the loaded scope.
-// Each column merges in the full-session timetable, so a Y course appears in both.
-function scheduleScope(scope, courses) {
+// Build the per-term schedule from the per-segment selection (state.scheduled).
+// A course lands in a column when its pill for that column is on, or when its
+// full-session pill is on (a Y course spans both columns).
+function scheduleScope(scope) {
   const fullTT = scope.full ? state.timetables[scope.full.value] : null
   const fullCodes = new Set((fullTT?.courses || []).map(c => c.code))
+  const fullVal = scope.full?.value
   return scope.terms.map(term => {
     const tt = mergedColumnTimetable(scope, term)
     const offered = new Set((tt.courses || []).map(c => c.code))
-    const inTerm = courses.filter(c => offered.has(c))
+    const inTerm = [...offered].filter(code => {
+      const sel = state.scheduled[code] || []
+      return sel.includes(term.value) || (fullCodes.has(code) && fullVal && sel.includes(fullVal))
+    })
     const results = inTerm.length ? buildSchedule(tt, inTerm, prefsObj()) : []
     results.forEach(r => { if (fullCodes.has(r.code)) r.full = true })
     // Offered but with no published meeting times → won't draw on the grid.
@@ -357,10 +395,10 @@ export async function refreshSchedule() {
   const scope = currentScope.value
   if (!scope) { state.schedNotice = 'Please select a scheduling range.'; return }
   const friendOn = state.friend.enabled && state.friend.courses.length
-  if (!state.scheduledCourses.length && !friendOn) {
+  if (!scheduledCodes.value.length && !friendOn) {
     state.board = []
     state.friendBoard = []
-    state.schedNotice = 'Select courses to preview a schedule.'
+    state.schedNotice = 'Pick a term segment for a course to preview a schedule.'
     return
   }
 
@@ -371,7 +409,7 @@ export async function refreshSchedule() {
   if (friendOn) {
     buildPairBoards(scope)
   } else {
-    state.board = scheduleScope(scope, state.scheduledCourses)
+    state.board = scheduleScope(scope)
     state.friendBoard = []
     state.scheduleView = 'you'
   }
@@ -412,13 +450,21 @@ export function removeFriendCourse(code) {
 }
 
 function buildPairBoards(scope) {
-  const shared = state.scheduledCourses.filter(c => state.friend.courses.includes(c))
-  const yourSolo = state.scheduledCourses.filter(c => !shared.includes(c))
-  const friendSolo = state.friend.courses.filter(c => !shared.includes(c))
+  const fullTT = scope.full ? state.timetables[scope.full.value] : null
+  const fullCodes = new Set((fullTT?.courses || []).map(c => c.code))
+  const fullVal = scope.full?.value
+  const friendSolo = state.friend.courses.filter(c => !scheduledCodes.value.includes(c))
   const you = []
   const friend = []
   for (const term of scope.terms) {
     const tt = mergedColumnTimetable(scope, term)
+    // Your courses scheduled in THIS column (per-segment pills).
+    const yourCodes = scheduledCodes.value.filter(code => {
+      const sel = state.scheduled[code] || []
+      return sel.includes(term.value) || (fullCodes.has(code) && fullVal && sel.includes(fullVal))
+    })
+    const shared = yourCodes.filter(c => state.friend.courses.includes(c))
+    const yourSolo = yourCodes.filter(c => !shared.includes(c))
     const pair = buildPairSchedule(tt, shared, yourSolo, friendSolo, prefsObj())
     const published = (tt.courseCount || 0) > 0
     const tbaYou = pair.you.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)

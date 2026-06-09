@@ -1,7 +1,7 @@
 <script setup>
 import {
-  state, pendingCourses, scopes, availability, courseConflictHints, tbaCourses,
-  onScopeChange, toggleScheduledCourse,
+  state, pendingCourses, scopes, courseOfferings, scheduledCodes, courseConflictHints, tbaCourses,
+  onScopeChange, isScheduledIn, toggleScheduledTerm,
   toggleFriend, addFriendCourse, removeFriendCourse,
 } from '../store.js'
 import CoursePicker from './CoursePicker.vue'
@@ -62,35 +62,32 @@ const DAYS = [
         <div v-if="!pendingCourses.length" class="sched-empty">
           No planned courses yet. Mark courses as &ldquo;Plan&rdquo; in the Program Planner tab to schedule them.
         </div>
-        <label
+        <div
           v-for="c in pendingCourses"
           :key="c.code"
           class="course-pick"
           :class="{
-            selected: state.scheduledCourses.includes(c.code),
+            selected: scheduledCodes.includes(c.code),
             conflict: !!courseConflictHints[c.code],
           }"
         >
-          <input
-            type="checkbox"
-            :checked="state.scheduledCourses.includes(c.code)"
-            @change="toggleScheduledCourse(c.code, $event.target.checked)"
-          >
           <span class="course-code">{{ c.code }}</span>
-          <span class="avail">
-            <span
-              v-for="t in (availability[c.code] || [])"
-              :key="t"
-              class="avail-badge"
-              :class="{ full: /Full/.test(t) }"
-            >{{ t }}</span>
+          <span class="seg-pills">
+            <button
+              v-for="t in (courseOfferings[c.code] || [])"
+              :key="t.value"
+              type="button"
+              class="seg-pill"
+              :class="{ active: isScheduledIn(c.code, t.value), full: /Full|Year/.test(t.label) }"
+              @click="toggleScheduledTerm(c.code, t.value)"
+            >{{ t.label }}</button>
             <span v-if="tbaCourses.has(c.code)" class="avail-badge tba" title="Offered, but no meeting times posted yet (TBA)">TBA</span>
-            <span v-if="!(availability[c.code] || []).length" class="avail-none" title="Not offered in this range (or not yet published)">—</span>
+            <span v-if="!(courseOfferings[c.code] || []).length" class="avail-none" title="Not offered in this range (or not yet published)">—</span>
           </span>
           <span v-if="courseConflictHints[c.code]" class="conflict-badge">
             {{ courseConflictHints[c.code].reason }}
           </span>
-        </label>
+        </div>
       </div>
 
       <label class="friend-toggle">
@@ -113,16 +110,18 @@ const DAYS = [
 </template>
 
 <style scoped>
-.avail { display: inline-flex; gap: 3px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
-.avail-badge {
-  font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 8px;
-  background: #e8f4f8; color: var(--teal); white-space: nowrap;
+.seg-pills { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.seg-pill {
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--gray-300); background: #fff; color: var(--gray-600); white-space: nowrap; transition: .1s;
 }
-.avail-badge.full { background: #fef3c7; color: #92400e; }
-.avail-badge.tba { background: #f3f4f6; color: #6b7280; }
+.seg-pill:hover { border-color: var(--teal); color: var(--teal); }
+.seg-pill.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+.seg-pill.full.active { background: #92400e; border-color: #92400e; }
+.avail-badge.tba { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #f3f4f6; color: #6b7280; white-space: nowrap; }
 .avail-none { font-size: 10px; color: var(--gray-400); }
 .conflict-badge {
-  grid-column: 1 / -1; margin-left: 22px; font-size: 10px; color: var(--red); font-weight: 600; line-height: 1.4;
+  grid-column: 1 / -1; margin-left: 2px; font-size: 10px; color: var(--red); font-weight: 600; line-height: 1.4;
 }
 .friend-toggle {
   display: flex !important; align-items: center; gap: 6px; flex-direction: row !important;
