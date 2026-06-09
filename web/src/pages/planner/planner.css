@@ -182,9 +182,11 @@
 .course-table tr.s-planned td{background:#eff6ff}
 
 /* ── Data import/export ── */
-/* Satisfaction summary — three at-a-glance blocks */
-.summary{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;font-size:12px}
-.sum-block{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:7px 9px}
+/* Satisfaction summary — at-a-glance blocks in a row */
+.summary{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin-bottom:10px;font-size:12px}
+.sum-block{flex:1 1 160px;min-width:0;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:7px 9px}
+.sum-block.done{background:#f0fdf4;border-color:#86efac}
+.sum-block.done .sum-head{color:#15803d}
 .sum-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray-500);margin-bottom:4px}
 .sum-head .sum-note{font-weight:400;text-transform:none;letter-spacing:0}
 .sum-line{line-height:1.6;color:var(--gray-700)}
@@ -192,6 +194,7 @@
 .sum-warn{color:#856404;line-height:1.5}
 .sum-ok{color:var(--green);font-weight:600}
 .sum-block.outlook{background:#eef6ff;border-color:#bfdbfe}
+.sum-block.outlook.done{background:#f0fdf4;border-color:#86efac}
 .sum-disclaimer{margin-top:4px;font-size:10px;font-style:italic;color:var(--gray-500);line-height:1.4}
 .summary .met{color:var(--green);font-weight:600}
 .summary .met::after{content:' ✓'}

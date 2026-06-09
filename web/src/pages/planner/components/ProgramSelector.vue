@@ -8,6 +8,8 @@ import CoursePicker from './CoursePicker.vue'
 const shortName = (p) => p.name.split(' - ')[0] || p.name
 const chipTitle = (p) => p.intention ? 'Intention (planning)' : p.type + ' — ' + (p.code || '')
 
+const comboValid = computed(() => activePrograms.value.length > 0 && legality.value.messages.length === 0)
+
 // Projected graduation outlook from the marked courses + valid program combination.
 const outlook = computed(() => {
   const dp = degreeProgress.value
@@ -66,7 +68,7 @@ function onImport() {
 
     <div class="summary" title="Counts courses you marked Plan / Taking / Done">
       <!-- 1. Programs (counts) -->
-      <div class="sum-block">
+      <div class="sum-block" :class="{ done: comboValid }">
         <div class="sum-head">Programs</div>
         <div class="sum-line">Specialist: <b>{{ programCounts.specialist }}</b></div>
         <div class="sum-line">Major: <b>{{ programCounts.major }}</b></div>
@@ -74,7 +76,7 @@ function onImport() {
       </div>
 
       <!-- 2. Distribution (diversity) -->
-      <div class="sum-block">
+      <div class="sum-block" :class="{ done: degreeProgress.satisfied }">
         <div class="sum-head">Distribution <span class="sum-note">(≥1.0 each)</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.cats.Science >= 1 }">Science: {{ degreeProgress.cats.Science.toFixed(1) }} / 1.0</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">Social Science: {{ degreeProgress.cats['Social Science'].toFixed(1) }} / 1.0</span></div>
@@ -82,13 +84,13 @@ function onImport() {
       </div>
 
       <!-- 3. Ordinary degree -->
-      <div class="sum-block">
+      <div class="sum-block" :class="{ done: degreeProgress.total >= 15 }">
         <div class="sum-head">Ordinary Degree</div>
         <div class="sum-line"><span :class="{ met: degreeProgress.total >= 15 }">Total: {{ degreeProgress.total.toFixed(1) }} / 15.0 cr</span></div>
       </div>
 
       <!-- 4. Honours degree -->
-      <div class="sum-block">
+      <div class="sum-block" :class="{ done: degreeProgress.total >= 20 && degreeProgress.upper2 >= 13 && degreeProgress.upper >= 6 }">
         <div class="sum-head">Honours Degree</div>
         <div class="sum-line"><span :class="{ met: degreeProgress.total >= 20 }">Total: {{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span></div>
         <div class="sum-line"><span :class="{ met: degreeProgress.upper2 >= 13 }">200+ level: {{ degreeProgress.upper2.toFixed(1) }} / 13.0</span></div>
@@ -96,7 +98,7 @@ function onImport() {
       </div>
 
       <!-- 5. Projected outcome -->
-      <div class="sum-block outlook">
+      <div class="sum-block outlook" :class="{ done: outlook.ordinary || outlook.honours }">
         <div class="sum-head">Projected Outcome</div>
         <div v-if="legality.messages.length">
           <div v-for="(m, i) in legality.messages" :key="i" class="sum-warn">{{ m }}</div>
