@@ -44,6 +44,21 @@ const stats = computed(() => {
     done: list.filter(c => getStatus(c.code) === 3).length,
   }
 })
+
+function onPreviewEnter(e) {
+  const wrap = e.currentTarget
+  const rect = wrap.getBoundingClientRect()
+  const preview = wrap.querySelector('.course-name-preview')
+  if (!preview) return
+  const estHeight = preview.scrollHeight || 200
+  const spaceAbove = rect.top
+  const spaceBelow = window.innerHeight - rect.bottom
+  if (spaceAbove < estHeight && spaceBelow > spaceAbove) {
+    wrap.classList.add('preview-below')
+  } else {
+    wrap.classList.remove('preview-below')
+  }
+}
 </script>
 
 <template>
@@ -80,7 +95,7 @@ const stats = computed(() => {
             </div>
           </td>
           <td class="c-course">
-            <span class="c-name-wrap"><a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank">{{ row.code }}</a><span
+            <span class="c-name-wrap" @mouseenter="onPreviewEnter"><a class="code-link" :href="'https://utm.calendar.utoronto.ca/course/' + row.code.toLowerCase()" target="_blank">{{ row.code }}</a><span
               v-if="row.meta" class="course-name-preview"><span class="cn-name">{{ row.meta.name }}</span><span v-if="row.meta.description" class="cn-desc">{{ row.meta.description }}</span></span></span><span
               v-if="row.exclConflicts.length" class="excl-flag" tabindex="0" role="note"
               :aria-label="'Exclusion conflict — you can only count one of ' + row.code + ' and ' + row.exclConflicts.join(', ')"

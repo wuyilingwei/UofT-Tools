@@ -9,6 +9,9 @@ const props = defineProps({
 const DAYS = [1, 2, 3, 4, 5]
 const grid = computed(() => buildGrid(props.results))
 
+const hasTimes = (r) => (r.sections || []).some(s => (s.times || []).some(t => t.day >= 1 && t.day <= 5 && t.endMs > t.startMs))
+const tbaItems = computed(() => props.results.filter(r => !r.missing && !hasTimes(r)))
+
 const blockTitle = (b) => {
   const inst = (b.instructors || []).map(i => `${i.firstName} ${i.lastName}`).join(', ')
   return `${b.code} ${b.sec}${b.shared ? ' (shared)' : ''}${b.full ? ' (full-session — runs both terms)' : ''}\n${b.startLabel}–${b.endLabel}\n${b.room}${inst ? '\n' + inst : ''}`
@@ -41,10 +44,18 @@ const blockTitle = (b) => {
             :title="blockTitle(b)"
           >
             <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span><span v-if="b.full" class="cb-full" title="Full-session course — runs in both terms">Y</span></div>
-            <div class="cb-room">{{ b.sec }} {{ b.room }}</div>
+            <div class="cb-room">{{ b.sec }} {{ b.room }}<span v-if="b.instructors?.length"> — {{ b.instructors.map(i => i.lastName).join(', ') }}</span></div>
           </div>
         </div>
       </div>
     </template>
+
+    <div v-if="tbaItems.length" class="tba-section">
+      <div class="tba-head">TBA — no meeting times posted</div>
+      <div v-for="item in tbaItems" :key="item.code" class="tba-row">
+        <span class="tba-code">{{ item.code }}</span>
+        <span v-for="(sec, si) in item.sections" :key="si" class="tba-sec">{{ sec.name || sec.type }} {{ sec.room }}<span v-if="sec.instructors?.length"> — {{ sec.instructors.map(i => i.lastName).join(', ') }}</span></span>
+      </div>
+    </div>
   </div>
 </template>

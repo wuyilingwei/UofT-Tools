@@ -128,6 +128,45 @@ export const degreeProgress = computed(() => {
   return { ...dist, upper, upper2 }
 })
 
+// Same as degreeProgress but only counts completed/in-progress courses (status >= 2).
+export const degreeProgressActual = computed(() => {
+  const codes = Object.keys(state.courseStatus).filter(c => state.courseStatus[c] >= 2)
+  const dist = computeDistribution(codes, courseCredit, c => state.courses?.[c]?.distribution || '')
+  let upper = 0
+  let upper2 = 0
+  for (const code of codes) {
+    const y = courseYear(code) || 0
+    if (y >= 2) upper2 += courseCredit(code)
+    if (y >= 3) upper += courseCredit(code)
+  }
+  return { ...dist, upper, upper2 }
+})
+
+// Per-status credit breakdown: plan (1) / taking (2) / done (3) / all.
+export const degreeBreakdown = computed(() => {
+  const byStatus = { 1: [], 2: [], 3: [] }
+  for (const [code, status] of Object.entries(state.courseStatus)) {
+    if (status >= 1 && status <= 3) byStatus[status].push(code)
+  }
+  const compute = (codes) => {
+    const dist = computeDistribution(codes, courseCredit, c => state.courses?.[c]?.distribution || '')
+    let upper = 0
+    let upper2 = 0
+    for (const code of codes) {
+      const y = courseYear(code) || 0
+      if (y >= 2) upper2 += courseCredit(code)
+      if (y >= 3) upper += courseCredit(code)
+    }
+    return { total: dist.total, upper, upper2, cats: dist.cats, satisfied: dist.satisfied }
+  }
+  return {
+    planned: compute(byStatus[1]),
+    taking: compute(byStatus[2]),
+    done: compute(byStatus[3]),
+    all: compute([...byStatus[1], ...byStatus[2], ...byStatus[3]]),
+  }
+})
+
 // ── Scheduling scopes / availability ──
 export const scopes = computed(() => buildScopes(state.sessions))
 export const currentScope = computed(() => scopes.value.find(s => s.id === state.scopeId) || null)
