@@ -142,6 +142,7 @@ export function computeLegality(active) {
 // Social Sciences). `creditOf(code)` → credit weight; `distOf(code)` → category.
 export const DEGREE_CREDITS = 20.0     // Honours bachelor (HBA / HBSc)
 export const ORDINARY_CREDITS = 15.0   // Ordinary (3-year) bachelor
+export const UPPER200_REQUIRED = 13.0   // 200+-level credits for an Honours degree
 export const UPPER_REQUIRED = 6.0       // 300/400-level credits for an Honours degree
 export const DIST_CATEGORIES = ['Science', 'Social Science', 'Humanities']
 export const DIST_MIN = 1.0

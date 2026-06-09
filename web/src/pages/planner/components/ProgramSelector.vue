@@ -78,6 +78,9 @@ function onImport() {
         </div>
         <div class="sum-line">
           <span :class="{ met: degreeProgress.total >= 20 }">Honours (HBA/HBSc): {{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span>
+        </div>
+        <div class="sum-line">
+          <span :class="{ met: degreeProgress.upper2 >= 13 }">200+-level {{ degreeProgress.upper2.toFixed(1) }} / 13.0</span>
           <span class="sum-sep">·</span>
           <span :class="{ met: degreeProgress.upper >= 6 }">300/400-level {{ degreeProgress.upper.toFixed(1) }} / 6.0</span>
         </div>

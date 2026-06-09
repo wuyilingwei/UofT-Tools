@@ -108,8 +108,13 @@ export const degreeProgress = computed(() => {
   const codes = Object.keys(state.courseStatus).filter(c => state.courseStatus[c] >= 1)
   const dist = computeDistribution(codes, courseCredit, c => state.courses?.[c]?.distribution || '')
   let upper = 0
-  for (const code of codes) if ((courseYear(code) || 0) >= 3) upper += courseCredit(code)
-  return { ...dist, upper }
+  let upper2 = 0
+  for (const code of codes) {
+    const y = courseYear(code) || 0
+    if (y >= 2) upper2 += courseCredit(code)
+    if (y >= 3) upper += courseCredit(code)
+  }
+  return { ...dist, upper, upper2 }
 })
 
 // ── Scheduling scopes / availability ──
