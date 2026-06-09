@@ -72,6 +72,17 @@ export const state = reactive({
 export const courseList = computed(() => buildCourseList(state.selectedPrograms, state.extraCourses))
 export const activePrograms = computed(() => state.selectedPrograms.filter(p => !p.intention))
 export const legality = computed(() => computeLegality(activePrograms.value))
+
+// Counts of active programs by type (Specialist / Major / Minor).
+export const programCounts = computed(() => {
+  const a = activePrograms.value
+  const has = (p, t) => (p.type || '').toLowerCase().includes(t)
+  return {
+    specialist: a.filter(p => has(p, 'specialist')).length,
+    major: a.filter(p => has(p, 'major')).length,
+    minor: a.filter(p => has(p, 'minor')).length,
+  }
+})
 export const suggestions = computed(() => computeSuggestions(state.selectedPrograms, state.programs))
 export const filteredSections = computed(() => {
   if (!state.programs) return []

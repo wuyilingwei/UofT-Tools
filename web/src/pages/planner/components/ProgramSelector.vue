@@ -1,11 +1,28 @@
 <script setup>
-import { state, legality, degreeProgress, toggleProgram, toggleIntention, applyImported } from '../store.js'
+import { computed } from 'vue'
+import { state, legality, degreeProgress, programCounts, activePrograms, toggleProgram, toggleIntention, applyImported } from '../store.js'
 import { chipClass } from '../lib/courses.js'
 import { exportPlanner, importPlanner } from '../lib/dataio.js'
 import CoursePicker from './CoursePicker.vue'
 
 const shortName = (p) => p.name.split(' - ')[0] || p.name
 const chipTitle = (p) => p.intention ? 'Intention (planning)' : p.type + ' — ' + (p.code || '')
+
+// Projected graduation outlook from the marked courses + valid program combination.
+const outlook = computed(() => {
+  const dp = degreeProgress.value
+  const valid = activePrograms.value.length > 0 && legality.value.messages.length === 0
+  const distOk = dp.satisfied
+  return {
+    honours: valid && distOk && dp.total >= 20 && dp.upper2 >= 13 && dp.upper >= 6,
+    ordinary: valid && distOk && dp.total >= 15,
+  }
+})
+const outlookText = computed(() => outlook.value.honours
+  ? '✓ On track for an Honours degree (HBA / HBSc, by program area).'
+  : outlook.value.ordinary
+    ? '✓ On track for an Ordinary degree (Honours requirements not yet met).'
+    : '✗ Not yet on track to graduate — see unmet items above.')
 
 function onExport() {
   exportPlanner(state.courseStatus, state.selectedPrograms)
@@ -48,42 +65,44 @@ function onImport() {
     </div>
 
     <div class="summary" title="Counts courses you marked Plan / Taking / Done">
-      <!-- Program combination + total credits -->
+      <!-- 1. Programs (counts) -->
       <div class="sum-block">
-        <div class="sum-head">Program &amp; Credits</div>
-        <div id="prog-legality">
-          <template v-if="legality.messages.length">
-            <div v-for="(m, i) in legality.messages" :key="i" class="sum-warn">{{ m }}</div>
-          </template>
-          <div v-else-if="legality.success" class="sum-ok">✓ {{ legality.success }}</div>
-        </div>
-        <div class="sum-line">Total marked: <b>{{ degreeProgress.total.toFixed(1) }}</b> credits</div>
+        <div class="sum-head">Programs</div>
+        <div class="sum-line">Specialist: <b>{{ programCounts.specialist }}</b></div>
+        <div class="sum-line">Major: <b>{{ programCounts.major }}</b></div>
+        <div class="sum-line">Minor: <b>{{ programCounts.minor }}</b></div>
       </div>
 
-      <!-- Distribution / diversity -->
+      <!-- 2. Distribution (diversity) -->
       <div class="sum-block">
-        <div class="sum-head">Distribution <span class="sum-note">(≥1.0 in each)</span></div>
-        <div class="dp-row">
-          <span class="dp-cat" :class="{ met: degreeProgress.cats.Science >= 1 }">Sci {{ degreeProgress.cats.Science.toFixed(1) }}</span>
-          <span class="dp-cat" :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">SSc {{ degreeProgress.cats['Social Science'].toFixed(1) }}</span>
-          <span class="dp-cat" :class="{ met: degreeProgress.cats.Humanities >= 1 }">Hum {{ degreeProgress.cats.Humanities.toFixed(1) }}</span>
-        </div>
+        <div class="sum-head">Distribution <span class="sum-note">(≥1.0 each)</span></div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.cats.Science >= 1 }">Science: {{ degreeProgress.cats.Science.toFixed(1) }} / 1.0</span></div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.cats['Social Science'] >= 1 }">Social Science: {{ degreeProgress.cats['Social Science'].toFixed(1) }} / 1.0</span></div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.cats.Humanities >= 1 }">Humanities: {{ degreeProgress.cats.Humanities.toFixed(1) }} / 1.0</span></div>
       </div>
 
-      <!-- Degree requirements (ordinary / honours, Arts & Science) -->
+      <!-- 3. Ordinary degree -->
       <div class="sum-block">
-        <div class="sum-head">Degree Requirements</div>
-        <div class="sum-line">
-          <span :class="{ met: degreeProgress.total >= 15 }">Ordinary: {{ degreeProgress.total.toFixed(1) }} / 15.0 cr</span>
+        <div class="sum-head">Ordinary Degree</div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.total >= 15 }">Total: {{ degreeProgress.total.toFixed(1) }} / 15.0 cr</span></div>
+      </div>
+
+      <!-- 4. Honours degree -->
+      <div class="sum-block">
+        <div class="sum-head">Honours Degree</div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.total >= 20 }">Total: {{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span></div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.upper2 >= 13 }">200+ level: {{ degreeProgress.upper2.toFixed(1) }} / 13.0</span></div>
+        <div class="sum-line"><span :class="{ met: degreeProgress.upper >= 6 }">300/400 level: {{ degreeProgress.upper.toFixed(1) }} / 6.0</span></div>
+      </div>
+
+      <!-- 5. Projected outcome -->
+      <div class="sum-block outlook">
+        <div class="sum-head">Projected Outcome</div>
+        <div v-if="legality.messages.length">
+          <div v-for="(m, i) in legality.messages" :key="i" class="sum-warn">{{ m }}</div>
         </div>
-        <div class="sum-line">
-          <span :class="{ met: degreeProgress.total >= 20 }">Honours (HBA/HBSc): {{ degreeProgress.total.toFixed(1) }} / 20.0 cr</span>
-        </div>
-        <div class="sum-line">
-          <span :class="{ met: degreeProgress.upper2 >= 13 }">200+-level {{ degreeProgress.upper2.toFixed(1) }} / 13.0</span>
-          <span class="sum-sep">·</span>
-          <span :class="{ met: degreeProgress.upper >= 6 }">300/400-level {{ degreeProgress.upper.toFixed(1) }} / 6.0</span>
-        </div>
+        <div class="sum-line" :class="{ 'sum-ok': outlook.ordinary }">{{ outlookText }}</div>
+        <div class="sum-disclaimer">Estimate only — verify your cGPA and any other graduation requirements with the Registrar.</div>
       </div>
     </div>
 
