@@ -21,9 +21,9 @@ const outlook = computed(() => {
   }
 })
 const outlookText = computed(() => outlook.value.honours
-  ? '✓ On track for an Honours degree (HBA / HBSc, by program area).'
+  ? '✓ On track for an Honours degree (HBA / HBSc).'
   : outlook.value.ordinary
-    ? '✓ On track for an Ordinary degree (Honours requirements not yet met).'
+    ? '✓ On track for an Ordinary degree.'
     : '✗ Not yet on track to graduate — see unmet items above.')
 
 function onExport() {
