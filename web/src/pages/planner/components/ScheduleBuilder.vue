@@ -1,6 +1,6 @@
 <script setup>
 import {
-  state, pendingCourses, scopes, courseOfferings, scheduledCodes, scheduleWarnings, tbaCourses,
+  state, pendingCourses, scopes, courseOfferings, scheduledCodes, scheduleWarnings,
   onScopeChange, isScheduledIn, toggleScheduledTerm, dayPref, cycleDayPref,
   toggleFriend, addFriendCourse, removeFriendCourse,
 } from '../store.js'
@@ -27,10 +27,11 @@ const WARN_TEXT = {
         <option v-for="s in scopes" :key="s.id" :value="s.id">{{ s.label }}</option>
       </select>
 
-      <div class="pref-head">Preferences <span>— best-effort, never forced</span></div>
+      <div class="pref-head">Preferences</div>
 
       <label>Schedule Density</label>
       <div class="pref-group">
+        <button class="pref-btn" :class="{ active: state.prefs.density === 'any' }" @click="state.prefs.density = 'any'">Any</button>
         <button class="pref-btn" :class="{ active: state.prefs.density === 'compact' }" @click="state.prefs.density = 'compact'">Compact</button>
         <button class="pref-btn" :class="{ active: state.prefs.density === 'spread' }" @click="state.prefs.density = 'spread'">Spread out</button>
       </div>
@@ -42,7 +43,7 @@ const WARN_TEXT = {
         <button class="pref-btn" :class="{ active: state.prefs.time === 'afternoon' }" @click="state.prefs.time = 'afternoon'">Afternoon</button>
       </div>
 
-      <label>Days (click to cycle: prefer free → prefer classes → any)</label>
+      <label>Days</label>
       <div class="day-row">
         <button
           v-for="day in DAYS"
@@ -50,9 +51,9 @@ const WARN_TEXT = {
           type="button"
           class="day-btn"
           :class="dayPref(day.d)"
-          :title="'Mon–Fri preference for ' + day.label"
+          :title="'Click to cycle: Any → prefer free → prefer classes'"
           @click="cycleDayPref(day.d)"
-        >{{ day.label }}<span class="day-state">{{ dayPref(day.d) === 'free' ? 'free' : dayPref(day.d) === 'busy' ? 'class' : '—' }}</span></button>
+        >{{ day.label }}<span class="day-state">{{ dayPref(day.d) === 'free' ? 'free' : dayPref(day.d) === 'busy' ? 'class' : 'Any' }}</span></button>
       </div>
 
       <label>Exam-reserved (ZZ) Blocks</label>
@@ -65,7 +66,7 @@ const WARN_TEXT = {
         </label>
       </div>
 
-      <div class="sched-notice">{{ state.schedNotice }}</div>
+      <div v-if="state.schedNotice" class="sched-notice">{{ state.schedNotice }}</div>
     </section>
 
     <section v-if="scheduleWarnings.length" class="sched-warnings">
@@ -95,10 +96,11 @@ const WARN_TEXT = {
               :key="t.value"
               type="button"
               class="seg-pill"
-              :class="{ active: isScheduledIn(c.code, t.value), full: /Full|Year/.test(t.label) }"
+              :class="{ active: isScheduledIn(c.code, t.value), full: /Full|Year/.test(t.label), tba: t.tba }"
+              :disabled="t.tba"
+              :title="t.tba ? 'Offered, but no meeting times posted yet (TBA)' : ''"
               @click="toggleScheduledTerm(c.code, t.value)"
-            >{{ t.label }}</button>
-            <span v-if="tbaCourses.has(c.code)" class="avail-badge tba" title="Offered, but no meeting times posted yet (TBA)">TBA</span>
+            >{{ t.label }}{{ t.tba ? ' TBA' : '' }}</button>
             <span v-if="!(courseOfferings[c.code] || []).length" class="avail-none" title="Not offered in this range (or not yet published)">—</span>
           </span>
         </div>
@@ -132,7 +134,8 @@ const WARN_TEXT = {
 .seg-pill:hover { border-color: var(--teal); color: var(--teal); }
 .seg-pill.active { background: var(--teal); border-color: var(--teal); color: #fff; }
 .seg-pill.full.active { background: #92400e; border-color: #92400e; }
-.avail-badge.tba { font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 8px; background: #f3f4f6; color: #6b7280; white-space: nowrap; }
+.seg-pill.tba { background: #f3f4f6; border-color: var(--gray-200); color: #9ca3af; cursor: not-allowed; }
+.seg-pill.tba:hover { border-color: var(--gray-200); color: #9ca3af; }
 .avail-none { font-size: 10px; color: var(--gray-400); }
 .pref-head {
   margin: 14px 0 4px; font-size: 12px; font-weight: 700; color: var(--gray-700);

@@ -49,9 +49,12 @@ export function badgeTerms(scope) {
   return scope.full ? [...scope.terms, scope.full] : [...scope.terms]
 }
 
-// Soft preferences (not hard constraints): avoiding a conflict (-50) always
-// outweighs day/time/density preferences, so a course is still placed even when
-// it can only fit on a less-preferred day or time.
+// Day/time/density are soft preferences, but avoiding a time conflict is ALWAYS
+// the first priority: a conflicting section gets a dominating penalty that no
+// combination of preferences can overcome, so the scheduler only ever places a
+// course on a conflicting slot when every one of its sections conflicts.
+export const CONFLICT_PENALTY = 10000
+
 export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
   let score = 50
   for (const t of sec.times) {
@@ -65,7 +68,7 @@ export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
     if (density === 'compact') score += sameDayPlaced * 5      // cluster onto fewer days
     else if (density === 'spread') score -= sameDayPlaced * 5  // spread across more days
     for (const p of placed) {
-      if (p.day === t.day && t.startMs < p.endMs && t.endMs > p.startMs) score -= 50
+      if (p.day === t.day && t.startMs < p.endMs && t.endMs > p.startMs) score -= CONFLICT_PENALTY
     }
   }
   return score
@@ -74,15 +77,19 @@ export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
 // "ZZ" is the room code for exam/test-reserved blocks. These may be allowed to
 // overlap: opts.zzOverlap (ZZ↔ZZ, default allowed) and opts.zzWithReg
 // (ZZ↔regular class, default NOT allowed → still a conflict).
+// Key identifying one meeting block of a course (for per-block conflict marking).
+export function timeKey(code, t) { return `${code}|${t.day}|${t.startMs}|${t.endMs}` }
+
 export function markConflicts(results, opts = {}) {
   const zzOverlap = opts.zzOverlap !== false
   const zzWithReg = opts.zzWithReg === true
+  const conflictTimes = new Set()
   const allTimes = []
   for (const r of results) {
     for (const sec of (r.sections || [])) {
       for (const t of sec.times) {
         if (!t.day) continue
-        allTimes.push({ result: r, day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ' })
+        allTimes.push({ result: r, day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ', key: timeKey(r.code, t) })
       }
     }
   }
@@ -95,8 +102,11 @@ export function markConflicts(results, opts = {}) {
       else if (a.zz || b.zz) { if (zzWithReg) continue }
       a.result.conflict = true
       b.result.conflict = true
+      conflictTimes.add(a.key)   // only the overlapping blocks turn red, not the
+      conflictTimes.add(b.key)   // course's other meetings
     }
   }
+  for (const r of results) r.conflictTimes = conflictTimes
 }
 
 // Greedily pick best LEC + TUT/PRA per course given preferences.
@@ -298,7 +308,9 @@ export function buildGrid(results) {
         if (height <= 0) continue
         dayBlocks[t.day].push({
           code: r.code, name: r.name, sec: sec.name, room: t.room,
-          top, height, color: r.color, conflict: r.conflict, shared: !!r.shared, full: !!r.full,
+          top, height, color: r.color,
+          conflict: !!(r.conflictTimes && r.conflictTimes.has(timeKey(r.code, t))),
+          shared: !!r.shared, full: !!r.full,
           startLabel: msToLabel(t.startMs), endLabel: msToLabel(t.endMs),
         })
       }

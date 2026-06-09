@@ -44,7 +44,7 @@ export const state = reactive({
   extraCourses: [],              // course codes added outside any program (6.1)
   courseStatus: loadCourseStatus(),  // { code: 0|1|2|3 }
 
-  prefs: { density: 'compact', time: 'any', freeDays: [], busyDays: [], zzOverlap: true, zzWithReg: false },
+  prefs: { density: 'any', time: 'any', freeDays: [], busyDays: [], zzOverlap: true, zzWithReg: false },
   scopeId: '',                 // selected scheduling scope (see lib/scheduling buildScopes)
   timetables: {},              // sessionValue → timetable data (lazy cache)
   scheduled: {},               // code → [termValue,…] : which segment(s) to schedule per course
@@ -107,27 +107,8 @@ export const availability = computed(() => {
   return scope ? buildCourseAvailability(badgeTerms(scope), state.timetables) : {}
 })
 
-// Codes offered in the current scope but with NO weekday meeting time in any of
-// its timetables (TBA) — surfaced as a badge in the picker rather than a board note.
-export const tbaCourses = computed(() => {
-  const scope = currentScope.value
-  if (!scope) return new Set()
-  const timed = new Map()  // code → has any meeting time across the scope
-  for (const term of badgeTerms(scope)) {
-    const tt = state.timetables[term.value]
-    if (!tt || !tt.courses) continue
-    for (const c of tt.courses) {
-      const has = (c.sections || []).some(s => (s.times || []).some(t => t.day >= 1 && t.day <= 5 && t.endMs > t.startMs))
-      timed.set(c.code, (timed.get(c.code) || false) || has)
-    }
-  }
-  const out = new Set()
-  for (const [code, has] of timed) if (!has) out.add(code)
-  return out
-})
-
 // Per-course term offerings in the current scope → the pills shown in the picker.
-//   { code: [{ value, label }, …] }
+//   { code: [{ value, label, tba }, …] }  tba = offered but no meeting times yet.
 export const courseOfferings = computed(() => {
   const scope = currentScope.value
   if (!scope) return {}
@@ -137,7 +118,9 @@ export const courseOfferings = computed(() => {
     if (!tt || !tt.courses) continue
     for (const c of tt.courses) {
       if (!map[c.code]) map[c.code] = []
-      if (!map[c.code].some(t => t.value === term.value)) map[c.code].push({ value: term.value, label: term.label })
+      if (map[c.code].some(t => t.value === term.value)) continue
+      const timed = (c.sections || []).some(s => (s.times || []).some(t => t.day >= 1 && t.day <= 5 && t.endMs > t.startMs))
+      map[c.code].push({ value: term.value, label: term.label, tba: !timed })
     }
   }
   return map
@@ -346,6 +329,7 @@ function mergedColumnTimetable(scope, term) {
 }
 
 export async function onScopeChange() {
+  state.scheduled = {}   // switching range clears all segment selections
   state.board = []
   state.friendBoard = []
   state.schedNotice = 'Loading timetable…'
@@ -439,7 +423,7 @@ export async function refreshSchedule() {
   }
 
   const unpublished = state.board.some(t => !t.published)
-  state.schedNotice = unpublished ? 'One or more terms have no published timetable yet.' : 'Schedule updated.'
+  state.schedNotice = unpublished ? 'One or more terms have no published timetable yet.' : ''
 }
 
 export const generateSchedule = refreshSchedule
