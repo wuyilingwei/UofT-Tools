@@ -10,6 +10,18 @@ const LS_STATUS = 'utm_course_status'
 const LS_PROGRAMS = 'utm_selected_programs'
 const LS_COMPLETED = 'utm_completed'
 const LS_EXTRA = 'utm_extra_courses'
+const LS_SCHEDULE = 'utm_schedule'
+
+function saveSchedule() {
+  try {
+    localStorage.setItem(LS_SCHEDULE, JSON.stringify({
+      scopeId: state.scopeId, scheduled: state.scheduled, prefs: state.prefs,
+    }))
+  } catch { /* ignore quota errors */ }
+}
+function loadSchedule() {
+  try { return JSON.parse(localStorage.getItem(LS_SCHEDULE) || '{}') } catch { return {} }
+}
 
 function loadCourseStatus() {
   const obj = {}
@@ -522,6 +534,7 @@ function buildPairBoards(scope) {
 }
 
 watch(scheduleSelection, () => {
+  saveSchedule()
   queueScheduleRefresh()
 }, { deep: true })
 
@@ -535,7 +548,13 @@ export async function init() {
   state.sessions = sess
   loadSavedPlanner()
   const sc = buildScopes(sess)
-  if (sc.length) { state.scopeId = sc[0].id; onScopeChange() }
+  // Restore the saved scheduling range + segment selections + preferences.
+  const saved = loadSchedule()
+  if (saved.prefs && typeof saved.prefs === 'object') Object.assign(state.prefs, saved.prefs)
+  const validScope = saved.scopeId && sc.find(s => s.id === saved.scopeId)
+  state.scopeId = validScope ? saved.scopeId : (sc.length ? sc[0].id : '')
+  if (validScope && saved.scheduled && typeof saved.scheduled === 'object') state.scheduled = saved.scheduled
+  if (state.scopeId) { await ensureScopeTimetables(); queueScheduleRefresh() }
 
   // Background, non-blocking: prereq/exclusion metadata.
   fetch(BASE + '/planner/data/utm-courses.json')

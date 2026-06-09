@@ -157,7 +157,7 @@
 .excl-flag{position:relative;display:inline-block;color:var(--red);font-size:12px;margin-left:4px;cursor:help;outline:none}
 .excl-tip{display:none;position:absolute;left:50%;top:140%;transform:translateX(-50%);z-index:60;width:230px;white-space:normal;padding:7px 9px;font-size:11px;line-height:1.5;color:var(--gray-800);background:#fff;border:1px solid var(--gray-200);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.14)}
 .excl-flag:hover .excl-tip,.excl-flag:focus .excl-tip,.excl-flag:focus-within .excl-tip{display:block}
-.prereq-cell{display:flex;align-items:flex-start;gap:3px;flex-wrap:wrap;max-width:220px;font-size:11px;color:var(--gray-600);line-height:1.7}
+.prereq-cell{display:flex;align-items:flex-start;gap:3px;flex-wrap:wrap;font-size:11px;color:var(--gray-600);line-height:1.7}
 .prc{font-family:monospace;font-weight:600;font-size:11px;cursor:pointer;padding:0 3px;border-radius:3px;border:1px solid transparent;transition:.1s}
 .prc:hover{border-color:var(--teal)}
 .prc-planned{color:#1d4ed8;background:#dbeafe}
