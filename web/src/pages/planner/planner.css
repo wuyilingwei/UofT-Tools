@@ -326,8 +326,10 @@
   .sp-b:nth-child(even){border-right:none !important}
   .sp-b:nth-child(n+3){border-bottom:none !important}
 
-  /* Schedule panel: scroll vertically (body is overflow:hidden, so panel must self-scroll) */
+  /* Schedule panel: controls + grid scroll as one unit.
+     Both children use flex:0 0 auto so they take natural content height —
+     flex:1 on grid-area from base would otherwise collapse to 0 when controls overflow. */
   #schedule-panel{flex-direction:column;overflow-y:auto}
-  .sched-controls{width:100% !important;flex-shrink:0;border-right:none;border-bottom:1px solid var(--gray-200);overflow-y:visible}
-  .grid-area{padding:10px;flex-shrink:0}
+  .sched-controls{width:100% !important;flex:0 0 auto;overflow-y:visible;border-right:none;border-bottom:1px solid var(--gray-200)}
+  .grid-area{flex:0 0 auto;padding:10px;overflow:visible}
 }
