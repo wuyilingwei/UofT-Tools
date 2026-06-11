@@ -9,7 +9,7 @@ import { suggestions, addSuggested } from '../store.js'
       <span
         v-for="s in suggestions"
         :key="s.id"
-        class="sugg-chip"
+        :class="['sugg-chip', (s.type || '').toLowerCase()]"
         :title="s.name + ' (' + s.type + ') — ' + s.shared + ' shared courses'"
         @click="addSuggested(s.id)"
       >
