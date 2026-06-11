@@ -1,7 +1,7 @@
 import { reactive, computed, watch } from 'vue'
 import { buildCourseList, computeLegality, computeSuggestions, courseCredit, courseYear, computeDistribution } from './lib/courses.js'
 import {
-  buildScopes, buildPairSchedule, rankedSchedules,
+  buildScopes, rankedSchedules,
   buildCourseAvailability, badgeTerms,
 } from './lib/scheduling.js'
 
@@ -62,9 +62,9 @@ export const state = reactive({
   scheduled: {},               // code → [termValue,…] : which segment(s) to schedule per course
   board: [],                   // [{value,label,results,published}] — your schedule per term
   altIndex: {},                // termValue → which ranked alternative is shown
-  friend: { enabled: false, courses: [] },  // friend co-scheduling (Phase E)
-  friendBoard: [],             // friend's schedule per term
-  scheduleView: 'you',         // 'you' | 'friend'
+  // Group scheduling: each friend is just a list of courses; whichever ones you
+  // also take become shared (same sections), the rest only constrain feasibility.
+  friends: { enabled: false, list: [] },   // list: [{ id, name, courses: [] }]
   schedNotice: '',
 })
 
@@ -212,8 +212,8 @@ export const scopePublished = computed(() => {
 
 export const scheduleSelection = computed(() => ({
   scheduled: JSON.parse(JSON.stringify(state.scheduled)),
-  friendEnabled: state.friend.enabled,
-  friendCourses: [...state.friend.courses],
+  friendsEnabled: state.friends.enabled,
+  friends: state.friends.list.map(f => ({ name: f.name, courses: [...f.courses] })),
   scopeId: state.scopeId,
   prefs: prefsObj(),
 }))
@@ -222,7 +222,7 @@ export const scheduleSelection = computed(() => ({
 // haven't scheduled. { type: 'conflict'|'missing'|'tba', code, term? }
 export const scheduleWarnings = computed(() => {
   const out = []
-  const seen = { conflict: new Set(), missing: new Set(), tba: new Set() }
+  const seen = { conflict: new Set(), missing: new Set(), tba: new Set(), friend: new Set() }
   const add = (type, code, term) => {
     if (seen[type].has(code)) return
     seen[type].add(code)
@@ -234,6 +234,7 @@ export const scheduleWarnings = computed(() => {
       else if (r.conflict) add('conflict', r.code)
     }
     for (const code of (term.tba || [])) add('tba', code, term.label)
+    for (const name of (term.infeasibleFriends || [])) add('friend', name, term.label)
   }
   return out
 })
@@ -411,7 +412,6 @@ export async function onScopeChange() {
   state.scheduled = {}   // switching range clears all segment selections
   state.altIndex = {}
   state.board = []
-  state.friendBoard = []
   state.schedNotice = 'Loading timetable…'
   await ensureScopeTimetables()
   queueScheduleRefresh()
@@ -460,12 +460,17 @@ function columnCodes(scope, term, fullCodes, fullVal) {
 function computeOptions(scope) {
   const fullCodes = new Set((scope.full ? (state.timetables[scope.full.value]?.courses || []) : []).map(c => c.code))
   const fullVal = scope.full?.value
+  const friends = state.friends.enabled
+    ? state.friends.list.filter(f => f.courses.length).map(f => ({ name: f.name, courses: [...f.courses] }))
+    : []
   optionsCache = {}
   state.altIndex = {}
   for (const term of scope.terms) {
     const tt = mergedColumnTimetable(scope, term)
     const inTerm = columnCodes(scope, term, fullCodes, fullVal)
-    optionsCache[term.value] = inTerm.length ? rankedSchedules(tt, inTerm, prefsObj()) : [{ results: [], conflicts: 0, score: 0 }]
+    optionsCache[term.value] = inTerm.length
+      ? rankedSchedules(tt, inTerm, prefsObj(), friends)
+      : [{ results: [], conflicts: 0, score: 0, infeasibleFriends: [] }]
   }
 }
 
@@ -483,10 +488,9 @@ function renderSoloBoard(scope) {
       value: term.value, label: term.label, results: chosen.results,
       published: (tt.courseCount || 0) > 0, tba,
       optionIndex: i, optionCount: options.length, conflicts: chosen.conflicts || 0,
+      infeasibleFriends: chosen.infeasibleFriends || [],
     }
   })
-  state.friendBoard = []
-  state.scheduleView = 'you'
 }
 
 // Step through the ranked alternatives for one column (no recompute).
@@ -515,10 +519,8 @@ export async function refreshSchedule() {
   const run = ++refreshRun
   const scope = currentScope.value
   if (!scope) { state.schedNotice = 'Please select a scheduling range.'; return }
-  const friendOn = state.friend.enabled && state.friend.courses.length
-  if (!scheduledCodes.value.length && !friendOn) {
+  if (!scheduledCodes.value.length) {
     state.board = []
-    state.friendBoard = []
     state.schedNotice = 'Pick a term segment for a course to preview a schedule.'
     return
   }
@@ -527,12 +529,8 @@ export async function refreshSchedule() {
   await ensureScopeTimetables()
   if (run !== refreshRun) return
 
-  if (friendOn) {
-    buildPairBoards(scope)
-  } else {
-    computeOptions(scope)
-    renderSoloBoard(scope)
-  }
+  computeOptions(scope)
+  renderSoloBoard(scope)
 
   const unpublished = state.board.some(t => !t.published)
   state.schedNotice = unpublished ? 'One or more terms have no published timetable yet.' : ''
@@ -540,55 +538,46 @@ export async function refreshSchedule() {
 
 export const generateSchedule = refreshSchedule
 
-// ── Friend co-scheduling (Phase E) ──
-export function toggleFriend(on) {
-  state.friend.enabled = on
-  if (!on) {
-    state.friend.courses = []
-    state.friendBoard = []
-    state.scheduleView = 'you'
-  }
+// ── Friend group scheduling ──
+let friendSeq = 0
+
+export function toggleFriends(on) {
+  state.friends.enabled = on
+  if (on && !state.friends.list.length) addFriend()
   queueScheduleRefresh()
 }
 
-export function addFriendCourse(code) {
+export function addFriend() {
+  const id = ++friendSeq
+  state.friends.list.push({ id, name: `Friend ${state.friends.list.length + 1}`, courses: [] })
+  return id
+}
+
+export function removeFriend(id) {
+  state.friends.list = state.friends.list.filter(f => f.id !== id)
+  queueScheduleRefresh()
+}
+
+export function renameFriend(id, name) {
+  const f = state.friends.list.find(f => f.id === id)
+  if (f && (name || '').trim()) f.name = name.trim()
+}
+
+export function addFriendCourse(id, code) {
+  const f = state.friends.list.find(f => f.id === id)
+  if (!f) return false
   const c = (code || '').toUpperCase().replace(/\s+/g, '')
   if (!isValidCourseCode(c)) return false
-  if (!state.friend.courses.includes(c)) state.friend.courses.push(c)
+  if (!f.courses.includes(c)) f.courses.push(c)
   queueScheduleRefresh()
   return true
 }
 
-export function removeFriendCourse(code) {
-  state.friend.courses = state.friend.courses.filter(x => x !== code)
+export function removeFriendCourse(id, code) {
+  const f = state.friends.list.find(f => f.id === id)
+  if (!f) return
+  f.courses = f.courses.filter(x => x !== code)
   queueScheduleRefresh()
-}
-
-function buildPairBoards(scope) {
-  const fullTT = scope.full ? state.timetables[scope.full.value] : null
-  const fullCodes = new Set((fullTT?.courses || []).map(c => c.code))
-  const fullVal = scope.full?.value
-  const friendSolo = state.friend.courses.filter(c => !scheduledCodes.value.includes(c))
-  const you = []
-  const friend = []
-  for (const term of scope.terms) {
-    const tt = mergedColumnTimetable(scope, term)
-    // Your courses scheduled in THIS column (per-segment pills).
-    const yourCodes = scheduledCodes.value.filter(code => {
-      const sel = state.scheduled[code] || []
-      return sel.includes(term.value) || (fullCodes.has(code) && fullVal && sel.includes(fullVal))
-    })
-    const shared = yourCodes.filter(c => state.friend.courses.includes(c))
-    const yourSolo = yourCodes.filter(c => !shared.includes(c))
-    const pair = buildPairSchedule(tt, shared, yourSolo, friendSolo, prefsObj())
-    const published = (tt.courseCount || 0) > 0
-    const tbaYou = pair.you.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
-    const tbaFriend = pair.friend.filter(r => !r.missing && !hasRenderableTimes(r)).map(r => r.code)
-    you.push({ value: term.value, label: term.label, results: pair.you, published, tba: tbaYou })
-    friend.push({ value: term.value, label: term.label, results: pair.friend, published, tba: tbaFriend })
-  }
-  state.board = you
-  state.friendBoard = friend
 }
 
 watch(scheduleSelection, () => {

@@ -3,30 +3,28 @@ import { computed } from 'vue'
 import { state, setAlt } from '../store.js'
 import ScheduleGrid from './ScheduleGrid.vue'
 
-const activeBoard = computed(() => (state.scheduleView === 'friend' ? state.friendBoard : state.board))
-const showViews = computed(() => state.friend.enabled && state.friendBoard.length > 0)
-const canNavigate = computed(() => state.scheduleView !== 'friend')
+const showSharedHint = computed(() =>
+  state.friends.enabled && state.board.some(t => t.results.some(r => r.shared)))
 </script>
 
 <template>
   <div class="board">
-    <div v-if="showViews" class="board-views">
-      <button class="bv-btn" :class="{ active: state.scheduleView === 'you' }" @click="state.scheduleView = 'you'">You</button>
-      <button class="bv-btn" :class="{ active: state.scheduleView === 'friend' }" @click="state.scheduleView = 'friend'">Friend</button>
-      <span class="bv-hint">★ = shared course (same lecture &amp; lab)</span>
+    <div v-if="showSharedHint" class="board-views">
+      <span class="bv-hint">★ = shared course (same lecture &amp; lab as your friend)</span>
     </div>
 
-    <div v-if="!activeBoard.length" class="no-data">
+    <div v-if="!state.board.length" class="no-data">
       Select courses to preview a schedule.
     </div>
 
     <div v-else class="term-cols">
-      <div v-for="term in activeBoard" :key="term.value" class="term-col">
+      <div v-for="term in state.board" :key="term.value" class="term-col">
         <div class="term-head">
           {{ term.label }}
           <span v-if="!term.published" class="term-unpub">timetable not published yet</span>
           <span v-if="term.conflicts" class="term-confl">{{ term.conflicts }} conflict(s)</span>
-          <div v-if="canNavigate && term.optionCount > 1" class="alt-nav">
+          <span v-if="term.infeasibleFriends?.length" class="term-confl">{{ term.infeasibleFriends.join(', ') }} can't fit</span>
+          <div v-if="term.optionCount > 1" class="alt-nav">
             <button class="alt-btn" :disabled="term.optionIndex === 0" @click="setAlt(term.value, term.optionIndex - 1)">‹</button>
             <span class="alt-label">option {{ term.optionIndex + 1 }} / {{ term.optionCount }}</span>
             <button class="alt-btn" :disabled="term.optionIndex >= term.optionCount - 1" @click="setAlt(term.value, term.optionIndex + 1)">›</button>
@@ -41,11 +39,6 @@ const canNavigate = computed(() => state.scheduleView !== 'friend')
 <style scoped>
 .board { display: flex; flex-direction: column; min-height: 0; }
 .board-views { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
-.bv-btn {
-  padding: 4px 14px; border: 1px solid var(--gray-300); border-radius: 6px;
-  background: #fff; cursor: pointer; font-size: 13px; color: var(--gray-700); transition: .1s;
-}
-.bv-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
 .bv-hint { font-size: 11px; color: var(--gray-500); margin-left: auto; }
 .term-cols { display: flex; gap: 14px; align-items: flex-start; }
 .term-col { flex: 1 1 0; min-width: 0; }

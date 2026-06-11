@@ -2,7 +2,7 @@
 import {
   state, pendingCourses, scopes, courseOfferings, scheduledCodes, scheduleWarnings, scopePublished,
   onScopeChange, isScheduledIn, toggleScheduledTerm, dayPref, cycleDayPref,
-  toggleFriend, addFriendCourse, removeFriendCourse,
+  toggleFriends, addFriend, removeFriend, renameFriend, addFriendCourse, removeFriendCourse,
 } from '../store.js'
 import CoursePicker from './CoursePicker.vue'
 
@@ -14,6 +14,7 @@ const WARN_TEXT = {
   conflict: (w) => `${w.code}: time conflict`,
   missing: (w) => `${w.code}: not offered in ${w.term}`,
   tba: (w) => `${w.code}: no meeting times posted yet (${w.term}, TBA)`,
+  friend: (w) => `${w.code}: can't fit their own courses around the shared ones (${w.term})`,
 }
 </script>
 
@@ -107,20 +108,33 @@ const WARN_TEXT = {
       </div>
 
       <label class="friend-toggle">
-        <input type="checkbox" :checked="state.friend.enabled" @change="toggleFriend($event.target.checked)">
-        Schedule with a friend
+        <input type="checkbox" :checked="state.friends.enabled" @change="toggleFriends($event.target.checked)">
+        Schedule with friends
       </label>
-      <p v-if="state.friend.enabled" class="friend-hint">
-        Courses you both pick are placed in the same lecture &amp; lab. Add your friend&rsquo;s courses:
-      </p>
-      <CoursePicker
-        v-if="state.friend.enabled"
-        label="Friend's courses"
-        placeholder="Search a course to add…"
-        :items="state.friend.courses"
-        :add="addFriendCourse"
-        :remove="removeFriendCourse"
-      />
+      <template v-if="state.friends.enabled">
+        <p class="friend-hint">
+          Add each friend&rsquo;s full course list. Courses you both take are placed in the
+          same lecture &amp; lab; their other courses just need to still fit around them.
+        </p>
+        <div v-for="f in state.friends.list" :key="f.id" class="friend-block">
+          <div class="friend-head">
+            <input
+              class="friend-name"
+              :value="f.name"
+              @change="renameFriend(f.id, $event.target.value)"
+            >
+            <button type="button" class="friend-remove" title="Remove this friend" @click="removeFriend(f.id)">×</button>
+          </div>
+          <CoursePicker
+            label=""
+            placeholder="Search a course to add…"
+            :items="f.courses"
+            :add="(code) => addFriendCourse(f.id, code)"
+            :remove="(code) => removeFriendCourse(f.id, code)"
+          />
+        </div>
+        <button type="button" class="friend-add" @click="addFriend()">+ Add another friend</button>
+      </template>
     </section>
   </aside>
 </template>
@@ -159,6 +173,23 @@ const WARN_TEXT = {
   color: var(--gray-800) !important; margin-top: 14px;
 }
 .friend-hint { font-size: 11px; color: var(--gray-600); line-height: 1.5; margin: 4px 0; }
+.friend-block { border: 1px solid var(--gray-200); border-radius: 8px; padding: 8px; margin: 6px 0; }
+.friend-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.friend-name {
+  flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--gray-800);
+  border: 1px solid transparent; border-radius: 5px; padding: 3px 6px; background: transparent;
+}
+.friend-name:hover, .friend-name:focus { border-color: var(--gray-300); background: #fff; outline: none; }
+.friend-remove {
+  width: 22px; height: 22px; line-height: 1; border: 1px solid var(--gray-300); border-radius: 5px;
+  background: #fff; cursor: pointer; color: var(--gray-600); font-size: 14px;
+}
+.friend-remove:hover { border-color: var(--red); color: var(--red); }
+.friend-add {
+  margin-top: 4px; padding: 4px 10px; border: 1px dashed var(--gray-300); border-radius: 6px;
+  background: #fff; cursor: pointer; font-size: 12px; color: var(--gray-600);
+}
+.friend-add:hover { border-color: var(--teal); color: var(--teal); }
 .zz-opts { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
 .zz-check {
   display: flex !important; align-items: flex-start; gap: 6px; flex-direction: row !important;
