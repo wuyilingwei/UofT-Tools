@@ -2,8 +2,8 @@ name: Update All Campus Calendars
 
 on:
   schedule:
-    # 08:00 UTC daily = 04:00 EDT / 03:00 EST
-    - cron: "0 8 * * *"
+    # 08:00 UTC every Monday = 04:00 EDT / 03:00 EST
+    - cron: "0 8 * * 1"
   # Allow manual runs from the Actions tab
   workflow_dispatch:
 
@@ -31,13 +31,18 @@ jobs:
       - name: Install Playwright Chromium (with OS dependencies)
         run: playwright install chromium --with-deps
 
+      # continue-on-error: a single blocked/broken source must not prevent
+      # the other campuses' fresh data from being committed below.
       - name: Run UTM scraper
+        continue-on-error: true
         run: python scripts/calendar/scrape_utm.py
 
       - name: Run UTSC scraper
+        continue-on-error: true
         run: python scripts/calendar/scrape_utsc.py
 
       - name: Run ArtsCI scraper
+        continue-on-error: true
         run: python scripts/calendar/scrape_artsci.py
 
       - name: Run program-event filter (experimental)
