@@ -95,7 +95,7 @@ def _infer_year(month_num: int, session: str) -> int:
             return int(first_yr.group(0)) if first_yr else datetime.now().year
         fall_yr   = int(fall_m.group(1))
         second_yr = int(sec_m.group(1))
-        return fall_yr if month_num >= 8 else second_yr
+        return fall_yr if month_num >= 6 else second_yr
 
     m = re.search(r"\d{4}", session)
     return int(m.group(0)) if m else datetime.now().year
