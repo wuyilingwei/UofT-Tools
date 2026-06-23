@@ -154,6 +154,7 @@
 .course-block.shared{outline:2px dashed rgba(255,255,255,.9);outline-offset:-3px}
 .course-block .cb-shared{margin-left:3px}
 .course-block .cb-full{margin-left:4px;font-size:9px;font-weight:700;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.85);color:#92400e;vertical-align:top}
+.course-block .cb-campus{margin-left:4px;font-size:9px;font-weight:700;padding:0 3px;border-radius:6px;background:rgba(255,255,255,.85);color:#6d28d9;vertical-align:top}
 .grid-tip{position:absolute;transform:translate(-50%,-100%);z-index:60;pointer-events:none;background:#1f2937;color:#fff;border-radius:7px;padding:7px 10px;font-size:11px;line-height:1.5;max-width:250px;box-shadow:0 4px 14px rgba(0,0,0,.3);white-space:normal}
 .grid-tip.below{transform:translate(-50%,0)}
 .grid-tip .gt-head{font-weight:700;font-size:12px}

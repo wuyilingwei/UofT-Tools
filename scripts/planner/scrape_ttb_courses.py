@@ -1,8 +1,13 @@
 """
 Scrape UTM course timetable from TTB API and output static JSON files.
-Outputs: public/planner/data/timetable-{session}.json  (one file per session)
+Outputs:
+  planner/data/utm-timetable-{session}.json  (UTM / ERIN — one per session)
+  planner/data/stg-timetable-{session}.json  (St. George / Arts & Sci — only
+      courses whose subject+number+weight also exist at UTM, so a student can
+      schedule the downtown "H1" twin of a UTM course as a cross-campus pill)
 """
 
+import re
 import sys
 import time
 from pathlib import Path
@@ -16,6 +21,9 @@ from common.paths import PLANNER_DATA_DIR as OUTPUT_DIR
 REFERENCE   = "https://api.easi.utoronto.ca/ttb/reference-data"
 COURSES_API = "https://api.easi.utoronto.ca/ttb/getPageableCourses"
 UTM_DIV     = "ERIN"
+# St. George divisions to also pull (Faculty of Arts & Science is where UTM
+# students cross-register). Add more division codes here to widen coverage.
+STG_DIVS    = ["ARTSC"]
 PAGE_SIZE   = 100
 
 SESSION = make_session(PLANNER_UA, {
@@ -32,7 +40,7 @@ def get_sessions() -> list[dict]:
     return [s for s in items if not s.get("header") and len(s["value"]) >= 5]
 
 
-def fetch_all_courses(session_code: str) -> list[dict]:
+def fetch_all_courses(session_code: str, divisions: list[str]) -> list[dict]:
     courses: list[dict] = []
     page = 1
     while True:
@@ -49,7 +57,7 @@ def fetch_all_courses(session_code: str) -> list[dict]:
             "deliveryModes": [],
             "dayPreferences": [],
             "timePreferences": [],
-            "divisions": [UTM_DIV],
+            "divisions": divisions,
             "creditWeights": [],
             "availableSpace": False,
             "waitListable": False,
@@ -108,6 +116,24 @@ def simplify_course(raw: dict) -> dict:
     }
 
 
+def base_code(code: str) -> str:
+    """Subject+number+weight key shared by a course's campus variants
+    (CSC108H5 → 'CSC108H'); the trailing campus digit is what differs."""
+    return re.sub(r"(\d)$", "", code or "")
+
+
+def write_timetable(prefix: str, code: str, label: str, courses: list[dict]) -> None:
+    out = {
+        "session":      code,
+        "sessionLabel": label,
+        "courseCount":  len(courses),
+        "courses":      courses,
+    }
+    dest = OUTPUT_DIR / f"{prefix}-timetable-{code}.json"
+    write_json(dest, out)
+    print(f"  -> {dest} ({len(courses)} courses)")
+
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -118,19 +144,18 @@ def main() -> None:
     for s in sessions:
         code  = s["value"]
         label = s["label"]
-        print(f"\nScraping {label} ({code})...")
-        raw_courses = fetch_all_courses(code)
-        simplified  = [simplify_course(c) for c in raw_courses]
+        print(f"\nScraping UTM {label} ({code})...")
+        utm = [simplify_course(c) for c in fetch_all_courses(code, [UTM_DIV])]
+        write_timetable("utm", code, label, utm)
 
-        out = {
-            "session":       code,
-            "sessionLabel":  label,
-            "courseCount":   len(simplified),
-            "courses":       simplified,
-        }
-        dest = OUTPUT_DIR / f"utm-timetable-{code}.json"
-        write_json(dest, out)
-        print(f"  -> {dest} ({len(simplified)} courses)")
+        # St. George: keep only the same-named twins of UTM courses, so the file
+        # stays small and matches the "extra H1 pill on a UTM course" feature.
+        print(f"Scraping St. George {label} ({code})...")
+        utm_bases = {base_code(c["code"]) for c in utm}
+        stg_all   = [simplify_course(c) for c in fetch_all_courses(code, STG_DIVS)]
+        stg       = [c for c in stg_all if base_code(c["code"]) in utm_bases]
+        print(f"  filtered {len(stg_all)} St. George courses → {len(stg)} cross-listed with UTM")
+        write_timetable("stg", code, label, stg)
 
     # Write a session index so the frontend knows which files exist
     index = [{"value": s["value"], "label": s["label"]} for s in sessions]

@@ -2,6 +2,34 @@
 
 const COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#16a34a', '#0891b2', '#4f46e5', '#b45309', '#be123c', '#0369a1']
 
+// Campus is encoded in the last digit of a course code (CSC108H[5]):
+// 1 = St. George (downtown), 3 = UTSC (Scarborough), 5 = UTM (Mississauga).
+// Two classes on DIFFERENT campuses need commute time between them; same-campus
+// classes do not. Returns '' when the code has no recognizable campus digit.
+const CAMPUS_NAMES = { 1: 'St. George', 3: 'UTSC', 5: 'UTM' }
+export function campusOf(code) {
+  const m = /[HY](\d)$/.exec(code || '')
+  return m ? m[1] : ''
+}
+export function campusName(code) { return CAMPUS_NAMES[campusOf(code)] || '' }
+
+// The commute buffer (ms) from a prefs.commute = { enabled, hours } setting.
+// Disabled or 0h → no buffer. Default is 1h enabled (set in the store).
+export function commuteBufferMs(prefs = {}) {
+  const c = prefs.commute
+  if (!c || c.enabled === false) return 0
+  return Math.max(0, Number(c.hours) || 0) * 3600000
+}
+
+// Do two meeting blocks clash? Same campus → a plain time overlap. Different
+// campus → also clash when the gap between them is below the commute buffer
+// (the student can't physically travel between campuses in time).
+function blocksClash(a, b, buffer) {
+  const cross = buffer > 0 && a.campus && b.campus && a.campus !== b.campus
+  const pad = cross ? buffer : 0
+  return a.startMs < b.endMs + pad && b.startMs < a.endMs + pad
+}
+
 // Short, grid-friendly term label from a full session label.
 export function shortTerm(label = '') {
   if (/summer/i.test(label) && /full/i.test(label)) return 'Summer Full'
@@ -78,10 +106,11 @@ export function dedupeSections(pool) {
 // course on a conflicting slot when every one of its sections conflicts.
 export const CONFLICT_PENALTY = 10000
 
-export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
+export function scoreSec(sec, freeDays, busyDays, density, timePref, placed, buffer = 0, campus = '') {
   let score = 50
-  for (const t of sec.times) {
-    if (!t.day) continue
+  for (const t0 of sec.times) {
+    if (!t0.day) continue
+    const t = { ...t0, campus }
     if (freeDays.includes(t.day)) score -= 25   // prefer to keep this day free
     if (busyDays.includes(t.day)) score += 20   // prefer classes on this day
     const hr = t.startMs / 3600000
@@ -91,7 +120,7 @@ export function scoreSec(sec, freeDays, busyDays, density, timePref, placed) {
     if (density === 'compact') score += sameDayPlaced * 5      // cluster onto fewer days
     else if (density === 'spread') score -= sameDayPlaced * 5  // spread across more days
     for (const p of placed) {
-      if (p.day === t.day && t.startMs < p.endMs && t.endMs > p.startMs) score -= CONFLICT_PENALTY
+      if (p.day === t.day && blocksClash(t, p, buffer)) score -= CONFLICT_PENALTY
     }
   }
   return score
@@ -106,13 +135,15 @@ export function timeKey(code, t) { return `${code}|${t.day}|${t.startMs}|${t.end
 export function markConflicts(results, opts = {}) {
   const zzOverlap = opts.zzOverlap !== false
   const zzWithReg = opts.zzWithReg === true
+  const buffer = commuteBufferMs(opts)
   const conflictTimes = new Set()
   const allTimes = []
   for (const r of results) {
+    const campus = campusOf(r.code)
     for (const sec of (r.sections || [])) {
       for (const t of sec.times) {
         if (!t.day) continue
-        allTimes.push({ result: r, sec, day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ', key: timeKey(r.code, t) })
+        allTimes.push({ result: r, sec, day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ', campus, key: timeKey(r.code, t) })
       }
     }
   }
@@ -122,9 +153,18 @@ export function markConflicts(results, opts = {}) {
       // Same course: only an overlap between two DIFFERENT sections (e.g. its
       // own LEC vs TUT) is a conflict; a section never conflicts with itself.
       if (a.result === b.result && a.sec === b.sec) continue
-      if (!(a.day === b.day && a.startMs < b.endMs && a.endMs > b.startMs)) continue
-      if (a.zz && b.zz) { if (zzOverlap) continue }
-      else if (a.zz || b.zz) { if (zzWithReg) continue }
+      if (a.day !== b.day) continue
+      const cross = buffer > 0 && a.campus && b.campus && a.campus !== b.campus
+      const overlap = a.startMs < b.endMs && a.endMs > b.startMs
+      // Cross-campus pairs clash when their gap is below the commute buffer,
+      // even without a true overlap; same-campus pairs need an actual overlap.
+      if (!(cross ? blocksClash(a, b, buffer) : overlap)) continue
+      // ZZ (exam-block) overlap allowances only apply to genuine overlaps on the
+      // same campus — a cross-campus commute clash is always a real conflict.
+      if (!cross) {
+        if (a.zz && b.zz) { if (zzOverlap) continue }
+        else if (a.zz || b.zz) { if (zzWithReg) continue }
+      }
       a.result.conflict = true
       b.result.conflict = true
       conflictTimes.add(a.key)   // only the overlapping blocks turn red, not the
@@ -138,6 +178,7 @@ export function markConflicts(results, opts = {}) {
 // prefs: { density, time, freeDays:number[], busyDays:number[] }
 export function buildSchedule(timetable, scheduledCourses, prefs) {
   const { density, time, freeDays, busyDays } = prefs
+  const buffer = commuteBufferMs(prefs)
   const lookup = new Map()
   for (const c of timetable.courses) {
     if (!lookup.has(c.code)) lookup.set(c.code, c)
@@ -159,14 +200,15 @@ export function buildSchedule(timetable, scheduledCourses, prefs) {
     const lectures = dedupeSections(entry.sections.filter(s => s.type === 'LEC' || s.type === 'ASYNC'))
     const tutorials = dedupeSections(entry.sections.filter(s => s.type === 'TUT' || s.type === 'PRA'))
 
+    const campus = campusOf(code)
     const pickedSections = []
     for (const pool of [lectures, tutorials]) {
       if (!pool.length) continue
-      const scored = pool.map(sec => ({ sec, score: scoreSec(sec, freeDays, busyDays, density, time, placed) }))
+      const scored = pool.map(sec => ({ sec, score: scoreSec(sec, freeDays, busyDays, density, time, placed, buffer, campus) }))
       scored.sort((a, b) => b.score - a.score)
       const best = scored[0].sec
       pickedSections.push(best)
-      for (const t of best.times) if (t.day) placed.push({ code, day: t.day, startMs: t.startMs, endMs: t.endMs })
+      for (const t of best.times) if (t.day) placed.push({ code, day: t.day, startMs: t.startMs, endMs: t.endMs, campus })
     }
 
     results.push({ code, name: entry.name, sections: pickedSections, color: colorMap[code], conflict: false })
@@ -223,6 +265,7 @@ function scheduleScore(results, { freeDays, busyDays, time, density }) {
 export function rankedSchedules(timetable, codes, prefs, friends = []) {
   const zzOverlap = prefs.zzOverlap !== false
   const zzWithReg = prefs.zzWithReg === true
+  const buffer = commuteBufferMs(prefs)
   const lookup = new Map()
   for (const c of timetable.courses) if (!lookup.has(c.code)) lookup.set(c.code, c)
   const colorMap = {}
@@ -231,6 +274,10 @@ export function rankedSchedules(timetable, codes, prefs, friends = []) {
 
   const overlaps = (a, b) => a.day === b.day && a.startMs < b.endMs && a.endMs > b.startMs
   const pairConflict = (a, b) => {
+    if (a.day !== b.day) return false
+    // Cross-campus pairs clash within the commute buffer (overlap included) and
+    // are never exempted by ZZ overlap allowances — you still have to travel.
+    if (buffer > 0 && a.campus && b.campus && a.campus !== b.campus) return blocksClash(a, b, buffer)
     if (!overlaps(a, b)) return false
     if (a.zz && b.zz) return !zzOverlap
     if (a.zz || b.zz) return !zzWithReg
@@ -248,15 +295,16 @@ export function rankedSchedules(timetable, codes, prefs, friends = []) {
     return false
   }
 
-  const optionTimes = (sections) => {
+  const optionTimes = (sections, campus) => {
     const out = []
-    for (const sec of sections) for (const t of sec.times) if (t.day) out.push({ day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ' })
+    for (const sec of sections) for (const t of sec.times) if (t.day) out.push({ day: t.day, startMs: t.startMs, endMs: t.endMs, zz: t.room === 'ZZ', campus })
     return out
   }
   // LEC × TUT options for one course. Self-conflicting combos are dropped —
   // unless ALL combos self-conflict, in which case they are kept so the course
   // still shows (marked red).
   const buildOpts = (entry) => {
+    const campus = campusOf(entry.code)
     const lecs = dedupeSections(entry.sections.filter(s => s.type === 'LEC' || s.type === 'ASYNC'))
     const tuts = dedupeSections(entry.sections.filter(s => s.type === 'TUT' || s.type === 'PRA'))
     const L = lecs.length ? lecs.map(s => [s]) : [[]]
@@ -278,7 +326,7 @@ export function rankedSchedules(timetable, codes, prefs, friends = []) {
         if (prefs.time === 'afternoon' && hr < 12) s -= 15
       }
       if (sections.length && !hasTime) s -= 1000
-      opts.push({ sections, times: optionTimes(sections), sScore: s, score: sections.reduce((acc, sec) => acc + scoreSec(sec, prefs.freeDays, prefs.busyDays, prefs.density, prefs.time, []), 0) })
+      opts.push({ sections, times: optionTimes(sections, campus), sScore: s, score: sections.reduce((acc, sec) => acc + scoreSec(sec, prefs.freeDays, prefs.busyDays, prefs.density, prefs.time, [], buffer, campus), 0) })
     }
     const clean = opts.filter(o => !selfConflict(o.times))
     return clean.length ? clean : opts
@@ -586,6 +634,7 @@ export function buildGrid(results) {
           code: r.code, name: r.name, sec: sec.name, room: t.room,
           equivalents: sec.equivalents || [],
           instructors: sec.instructors || [],
+          campus: campusOf(r.code), campusName: campusName(r.code),
           top, height, color: r.color,
           conflict: !!(r.conflictTimes && r.conflictTimes.has(timeKey(r.code, t))),
           shared: !!r.shared, sharedWith: r.sharedWith || [], full: !!r.full,

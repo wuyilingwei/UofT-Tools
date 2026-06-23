@@ -3,7 +3,14 @@ import { buildCourseList, computeLegality, computeSuggestions, courseCredit, cou
 import {
   buildScopes, rankedSchedules,
   buildCourseAvailability, badgeTerms,
+  campusOf,
 } from './lib/scheduling.js'
+
+// Subject+number+weight key shared by a course's campus variants (CSC108H5 ↔
+// CSC108H1 → 'CSC108H'); the trailing campus digit is what differs.
+const baseCode = (code) => (code || '').replace(/(\d)$/, '')
+// The "H1"/"Y1" campus suffix shown on a cross-campus pill.
+const campusSuffix = (code) => (/[HY]\d$/.exec(code || '') || ['H5'])[0]
 
 const BASE = ''
 const LS_STATUS = 'utm_course_status'
@@ -56,7 +63,9 @@ export const state = reactive({
   extraCourses: [],              // course codes added outside any program (6.1)
   courseStatus: loadCourseStatus(),  // { code: 0|1|2|3 }
 
-  prefs: { density: 'any', time: 'any', freeDays: [], busyDays: [], zzOverlap: true, zzWithReg: false },
+  // commute: cross-campus buffer between back-to-back classes on different
+  // campuses (St. George/UTM/UTSC). enabled by default at 1 hour; hours ∈ {0,1,2}.
+  prefs: { density: 'any', time: 'any', freeDays: [], busyDays: [], zzOverlap: true, zzWithReg: false, commute: { enabled: true, hours: 1 } },
   scopeId: '',                 // selected scheduling scope (see lib/scheduling buildScopes)
   timetables: {},              // sessionValue → timetable data (lazy cache)
   scheduled: {},               // code → [termValue,…] : which segment(s) to schedule per course
@@ -183,16 +192,36 @@ export const availability = computed(() => {
 export const courseOfferings = computed(() => {
   const scope = currentScope.value
   if (!scope) return {}
-  const map = {}
+  // 1) Every offered code → its own per-term availability.
+  const raw = {}
   for (const term of badgeTerms(scope)) {
     const tt = state.timetables[term.value]
     if (!tt || !tt.courses) continue
     for (const c of tt.courses) {
-      if (!map[c.code]) map[c.code] = []
-      if (map[c.code].some(t => t.value === term.value)) continue
+      if (!raw[c.code]) raw[c.code] = []
+      if (raw[c.code].some(t => t.value === term.value)) continue
       const timed = (c.sections || []).some(s => (s.times || []).some(t => t.day >= 1 && t.day <= 5 && t.endMs > t.startMs))
-      map[c.code].push({ value: term.value, label: term.label, tba: !timed })
+      raw[c.code].push({ value: term.value, label: term.label, tba: !timed })
     }
+  }
+  // 2) Index codes by their cross-campus base so a UTM course can find its
+  //    St. George (H1) twin.
+  const byBase = {}
+  for (const code of Object.keys(raw)) (byBase[baseCode(code)] = byBase[baseCode(code)] || []).push(code)
+  // 3) Each UTM (campus 5) course shows its own pills plus an extra pill per
+  //    term for any same-named course offered on another campus, labelled with
+  //    that campus suffix (e.g. "Fall H1"). Each pill carries the code it adds.
+  const map = {}
+  for (const code of Object.keys(raw)) {
+    if (campusOf(code) !== '5') continue
+    const pills = raw[code].map(p => ({ ...p, code, campus: '5' }))
+    for (const sib of (byBase[baseCode(code)] || [])) {
+      if (sib === code || campusOf(sib) === '5') continue
+      for (const p of raw[sib]) {
+        pills.push({ value: p.value, label: `${p.label} ${campusSuffix(sib)}`, tba: p.tba, code: sib, campus: campusOf(sib) })
+      }
+    }
+    map[code] = pills
   }
   return map
 })
@@ -371,18 +400,28 @@ export function toggleScheduledTerm(code, termValue) {
 // Term-segment choices are kept (a course may be scheduled under another scope).
 export function syncScheduledCourses() {
   const pending = new Set(pendingCourses.value.map(p => p.code))
+  const pendingBase = new Set(pendingCourses.value.map(p => baseCode(p.code)))
   for (const code of Object.keys(state.scheduled)) {
-    if (!pending.has(code)) delete state.scheduled[code]
+    if (pending.has(code)) continue
+    // Keep a cross-campus (e.g. H1) pick while its same-named UTM course stays planned.
+    if (campusOf(code) !== '5' && pendingBase.has(baseCode(code))) continue
+    delete state.scheduled[code]
   }
   queueScheduleRefresh()
 }
 
 async function ensureTimetable(value) {
   if (state.timetables[value]) return state.timetables[value]
-  let data
-  try {
-    data = await fetch(BASE + `/planner/data/utm-timetable-${value}.json`).then(r => r.json())
-  } catch { data = { courses: [], courseCount: 0 } }
+  const fetchJson = (file) => fetch(BASE + `/planner/data/${file}`).then(r => r.ok ? r.json() : null).catch(() => null)
+  // UTM is the primary timetable; St. George (H1) same-named courses are merged
+  // in so they can be scheduled as extra cross-campus pills. They share the
+  // university-wide session codes, so the files line up 1:1.
+  const [utm, stg] = await Promise.all([
+    fetchJson(`utm-timetable-${value}.json`),
+    fetchJson(`stg-timetable-${value}.json`),
+  ])
+  const base = utm || { courses: [], courseCount: 0 }
+  const data = { ...base, courses: [...(base.courses || []), ...((stg && stg.courses) || [])] }
   state.timetables[value] = data
   queueScheduleRefresh()
   return data
@@ -425,6 +464,7 @@ function prefsObj() {
     busyDays: state.prefs.busyDays.map(Number),
     zzOverlap: state.prefs.zzOverlap,
     zzWithReg: state.prefs.zzWithReg,
+    commute: { enabled: state.prefs.commute?.enabled !== false, hours: Number(state.prefs.commute?.hours) || 0 },
   }
 }
 

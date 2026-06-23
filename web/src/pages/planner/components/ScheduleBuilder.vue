@@ -57,6 +57,21 @@ const WARN_TEXT = {
         >{{ day.label }}<span class="day-state">{{ dayPref(day.d) === 'free' ? 'free' : dayPref(day.d) === 'busy' ? 'class' : 'Any' }}</span></button>
       </div>
 
+      <label>Cross-campus Commute</label>
+      <label class="zz-check">
+        <input type="checkbox" v-model="state.prefs.commute.enabled"> Keep a buffer between classes on different campuses
+      </label>
+      <div class="pref-group" v-if="state.prefs.commute.enabled">
+        <button
+          v-for="h in [0, 1, 2]"
+          :key="h"
+          type="button"
+          class="pref-btn"
+          :class="{ active: state.prefs.commute.hours === h }"
+          @click="state.prefs.commute.hours = h"
+        >{{ h }} h</button>
+      </div>
+
       <label>Exam-reserved (ZZ) Blocks</label>
       <div class="zz-opts">
         <label class="zz-check">
@@ -94,13 +109,13 @@ const WARN_TEXT = {
           <span class="seg-pills">
             <button
               v-for="t in (courseOfferings[c.code] || [])"
-              :key="t.value"
+              :key="(t.code || c.code) + t.value"
               type="button"
               class="seg-pill"
-              :class="{ active: isScheduledIn(c.code, t.value), full: /Full|Year/.test(t.label), tba: t.tba }"
+              :class="{ active: isScheduledIn(t.code || c.code, t.value), full: /Full|Year/.test(t.label), tba: t.tba, offcampus: t.campus && t.campus !== '5' }"
               :disabled="t.tba"
-              :title="t.tba ? 'Offered, but no meeting times posted yet (TBA)' : ''"
-              @click="toggleScheduledTerm(c.code, t.value)"
+              :title="t.tba ? 'Offered, but no meeting times posted yet (TBA)' : (t.campus && t.campus !== '5' ? 'Same course on another campus — adds a commute buffer when scheduled next to a UTM class' : '')"
+              @click="toggleScheduledTerm(t.code || c.code, t.value)"
             >{{ t.label }}{{ t.tba ? ' TBA' : '' }}</button>
             <span v-if="!(courseOfferings[c.code] || []).length" class="avail-none">{{ scopePublished ? 'Not offered in this range' : 'Timetable not published yet' }}</span>
           </span>
@@ -148,6 +163,9 @@ const WARN_TEXT = {
 .seg-pill:hover { border-color: var(--teal); color: var(--teal); }
 .seg-pill.active { background: var(--teal); border-color: var(--teal); color: #fff; }
 .seg-pill.full.active { background: #92400e; border-color: #92400e; }
+.seg-pill.offcampus { border-color: #c084fc; color: #7c3aed; border-style: dashed; }
+.seg-pill.offcampus:hover { border-color: #7c3aed; color: #7c3aed; }
+.seg-pill.offcampus.active { background: #7c3aed; border-color: #7c3aed; color: #fff; border-style: solid; }
 .seg-pill.tba { background: #f3f4f6; border-color: var(--gray-200); color: #9ca3af; cursor: not-allowed; }
 .seg-pill.tba:hover { border-color: var(--gray-200); color: #9ca3af; }
 .avail-none { font-size: 10px; color: var(--gray-400); }

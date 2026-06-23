@@ -57,7 +57,7 @@ const instNames = (b) => (b.instructors || []).map(i => `${i.firstName} ${i.last
             @mouseenter="showTip(b, $event)"
             @mouseleave="hideTip"
           >
-            <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span><span v-if="b.full" class="cb-full" title="Full-session course — runs in both terms">Y</span></div>
+            <div class="cb-code">{{ b.code }}<span v-if="b.shared" class="cb-shared">★</span><span v-if="b.full" class="cb-full" title="Full-session course — runs in both terms">Y</span><span v-if="b.campus && b.campus !== '5'" class="cb-campus" :title="b.campusName + ' campus'">{{ b.campusName }}</span></div>
             <div class="cb-room">{{ b.sec }}<span v-if="b.equivalents?.length"> (+{{ b.equivalents.length }})</span> {{ b.room }}<span v-if="b.instructors?.length"> — {{ b.instructors.map(i => i.lastName).join(', ') }}</span></div>
           </div>
         </div>
@@ -75,6 +75,7 @@ const instNames = (b) => (b.instructors || []).map(i => `${i.firstName} ${i.last
       <div v-if="instNames(tip.b)" class="gt-line">{{ instNames(tip.b) }}</div>
       <div v-if="tip.b.shared" class="gt-line">★ Shared with {{ (tip.b.sharedWith || []).join(', ') || 'friend' }}</div>
       <div v-if="tip.b.full" class="gt-line">Full-session — runs both terms</div>
+      <div v-if="tip.b.campus && tip.b.campus !== '5'" class="gt-line">{{ tip.b.campusName }} campus — commute buffer applies</div>
       <div v-if="tip.b.equivalents?.length" class="gt-eq">Same time: {{ tip.b.equivalents.join(', ') }}</div>
     </div>
 
