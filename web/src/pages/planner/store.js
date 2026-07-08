@@ -18,6 +18,7 @@ const LS_PROGRAMS = 'utm_selected_programs'
 const LS_COMPLETED = 'utm_completed'
 const LS_EXTRA = 'utm_extra_courses'
 const LS_SCHEDULE = 'utm_schedule'
+const LS_TTB_WARNING = 'utm_ttb_warning_seen'
 
 function saveSchedule() {
   try {
@@ -75,7 +76,24 @@ export const state = reactive({
   // also take become shared (same sections), the rest only constrain feasibility.
   friends: { enabled: false, list: [] },   // list: [{ id, name, courses: [] }]
   schedNotice: '',
+  ttbWarningOpen: false,
 })
+
+// Schedule Builder's timetable data comes from ttb.utoronto.ca (the university's
+// own public tool) rather than ACORN, for compliance reasons — but the two have
+// been observed to disagree for reasons we haven't been able to pin down. Nag
+// the user once, the first time they open the Schedule Builder tab.
+export function maybeShowTtbWarning() {
+  try {
+    if (localStorage.getItem(LS_TTB_WARNING)) return
+  } catch { /* ignore */ }
+  state.ttbWarningOpen = true
+}
+
+export function dismissTtbWarning() {
+  state.ttbWarningOpen = false
+  try { localStorage.setItem(LS_TTB_WARNING, '1') } catch { /* ignore quota errors */ }
+}
 
 // ── Derived state (reactive) ──
 export const courseList = computed(() => buildCourseList(state.selectedPrograms, state.extraCourses))

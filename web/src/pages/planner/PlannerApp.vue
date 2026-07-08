@@ -1,19 +1,23 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import './planner.css'
-import { state, init, syncScheduledCourses, closePopup } from './store.js'
+import { state, init, syncScheduledCourses, closePopup, maybeShowTtbWarning } from './store.js'
 import ProgramSidebar from './components/ProgramSidebar.vue'
 import ProgramSelector from './components/ProgramSelector.vue'
 import CourseListView from './components/CourseListView.vue'
 import RequirementsView from './components/RequirementsView.vue'
 import ScheduleBuilder from './components/ScheduleBuilder.vue'
 import ScheduleBoard from './components/ScheduleBoard.vue'
+import TtbWarningModal from './components/TtbWarningModal.vue'
 
 const sidebarOpen = ref(false)
 
 function switchTab(tab) {
   state.activeTab = tab
-  if (tab === 'schedule') syncScheduledCourses()
+  if (tab === 'schedule') {
+    syncScheduledCourses()
+    maybeShowTtbWarning()
+  }
   sidebarOpen.value = false
 }
 
@@ -71,5 +75,7 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
         <ScheduleBoard />
       </div>
     </div>
+
+    <TtbWarningModal v-if="state.ttbWarningOpen" />
   </div>
 </template>
